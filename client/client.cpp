@@ -20,10 +20,13 @@
 #define	MAX_LINE 4096
 using namespace std;
 
-void pre_reqs(struct sockaddr_in sin, int udp_s, int tcp_s);
+int pre_reqs(struct sockaddr_in sin, int udp_s, int tcp_s);
 int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int udp_s); 
 void crt_operation(int s);
-
+void error(string msg){
+    perror(msg.c_str());
+    exit(1);
+}
 int main(int argc, char* argv[])
 {
     /* variable initialization */
@@ -51,19 +54,6 @@ int main(int argc, char* argv[])
         fprintf(stderr,"myftp:unkown host: %s\n", host);
         exit(1);
     }
-
-    /*build TCP address data structure
-    bzero((char *)&tcp_sin, sizeof(tcp_sin));
-    tcp_sin.sin_family = AF_INET;
-    bcopy(hp->h_addr,(char*)&tcp_sin.sin_addr, hp->h_length);
-    tcp_sin.sin_port = htons(port_num);
-
-    build UDP address data structure
-    bzero((char *)&udp_sin, sizeof(udp_sin));
-    udp_sin.sin_family = AF_INET;
-    bcopy(hp->h_addr,(char*)&udp_sin.sin_addr, hp->h_length);
-    udp_sin.sin_port = htons(port_num);
-    */
     
     /*build address data structure*/
     bzero((char *)&sin, sizeof(sin));
@@ -89,15 +79,9 @@ int main(int argc, char* argv[])
         close(tcp_s);
         exit(1);
     }
-    /*UDP doesn't need to connect on port*/
-    /*if(connect(udp_s,(struct sockaddr*)&udp_sin,sizeof(udp_sin))<0){
-        perror("simple-talk:connect failed");
-        close(upd_s);
-        exit(1);
-    }*/
 
     cout << "Connected to server" << endl;
-    pre_reqs(sin,udp_s,tcp_s);
+    if(!pre_reqs(sin,udp_s,tcp_s)) error("Problem with username and password. Goodbye");
 
     cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
     //main loop: get and send lines of text
@@ -118,7 +102,7 @@ int main(int argc, char* argv[])
     exit(0);
 }
 
-void pre_reqs(struct sockaddr_in sin, int udp_s, int tcp_s){
+int pre_reqs(struct sockaddr_in sin, int udp_s, int tcp_s){
     char buf[MAX_LINE];
     string username, password;
     int ibytes, obytes;
@@ -126,53 +110,50 @@ void pre_reqs(struct sockaddr_in sin, int udp_s, int tcp_s){
     //wait for username request
     if((ibytes = recv(tcp_s,buf,sizeof(buf),0)) == -1){
     	perror("Receive username client error!\n");
-    	exit(1);
+        return -1;
     }
     string server_uname_req = string(buf, ibytes);
-    cout << server_uname_req << endl;
-    cout << server_uname_req.length() << endl;
     //check for username being sent
     if(server_uname_req == "username"){
         cout << "Please enter your username: " << endl; 
     } else {
         cout << "username not sent" << endl;
-        exit(1);
+        return -1;
     }
     cin >> username;
     //send username back
     if(send(tcp_s,username.c_str(),strlen(username.c_str()),0) == -1){
         perror("client sending username error\n");
-        exit(1);
+        return -1;
     }
     bzero((char*)&buf,sizeof(buf));
     //wait for password request
     if((ibytes = recv(tcp_s,buf,sizeof(buf),0)) == -1){
         perror("Recieve password client error");
-        exit(1);
+        return -1;
     }
     //check for password being sent
     string server_pw_req = string(buf, ibytes);
-    cout << server_pw_req << endl;
     if(server_pw_req == "password"){
         cout << "Please enter the password: ";
     } else {
         cout << "password request not sent" << endl;
-        exit(1);
+        return -1;
     }
     cin >> password;
     //send password
     if(send(tcp_s,password.c_str(),strlen(password.c_str()),0) == -1){
         perror("client sending password error\n");
-        exit(1);
+        return -1;
     }
     bzero((char*)&buf,sizeof(buf));
     //wait for acknowledgement
     if((ibytes = recv(tcp_s,buf,sizeof(buf),0)) == -1){
         perror("Recieve acknowledgement client error");
-        exit(1);
+        return -1;
     }
 
-    return;
+    return 1;
 }
 
 /*Wrapper function to handle oepration requests*/

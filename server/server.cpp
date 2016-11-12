@@ -58,16 +58,10 @@ int main(int argc, char *argv[]) {
     sin.sin_port = htons(port);
 
     /* setup passive UDP open */  
-    if ((udp_s = socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
-        perror("myfrmd: socket\n");
-        exit(1);
-    }
+    if ((udp_s = socket(PF_INET, SOCK_DGRAM, 0)) < 0) error("myfrmd: socket\n");
 
     /* setup TCP open */
-    if ((tcp_s = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
-        perror("myfrmd: socket\n");
-        exit(1);
-    }
+    if ((tcp_s = socket(PF_INET, SOCK_STREAM, 0)) < 0) error("myfrmd: socket\n");
 
     /*set tcp socket option*/
     if((setsockopt(tcp_s,SOL_SOCKET,SO_REUSEADDR, (char*)&optval,sizeof(int)))<0) error("myftpd:setscokt\n");
@@ -78,58 +72,43 @@ int main(int argc, char *argv[]) {
     /* bind TCP socket */
     if ((bind(tcp_s, (struct sockaddr *)&sin, sizeof(sin))) < 0) error("myfrmd: bind\n");
 
-
-
+    /*listen for client connection*/
     if((listen(tcp_s,1))<0){
-        perror("myftpd:listen failed");
-        exit(1);
-    } else {
-        printf("Welcome to TCP Server. \n");
+        error("myftpd:listen failed"); 
     }
 
-    udp_cinLength = sizeof(udp_cin);
+    printf("Welcome to TCP Server. \n");
 
+    //udp_cinLength = sizeof(sin);
 
-    socklen_t tcp_len;
     int tcp_comm_s; //communication socket to be used in comm with the client
-    if((tcp_comm_s = accept(tcp_s,(struct sockaddr*)&tcp_sin,&tcp_len))<0){
-        error("myfrmd: error in accept");
-    }
-    else {
-        cout << "Connected to client" << endl;
-    }
+    if((tcp_comm_s = accept(tcp_s,(struct sockaddr*)&sin,&len))<0) error("myfrmd: error in accept");
+        
+    cout << "Connected to client" << endl;
 
     while (server_running) {
-
         memset(buf, '\0', sizeof(buf));
         sprintf(buf, "username");
-        n = sendto(tcp_comm_s, buf, strlen(buf), 0, (struct sockaddr *) &udp_cin, udp_cinLength);
-        if (n < 0)
-            error("ERROR in sendto");
+        if( send(tcp_comm_s, buf, strlen(buf), 0) < 0) error("ERROR in sendto");
 
         // receive a datagram from a client
         memset(buf, '\0', sizeof(buf));
-        userlen = recvfrom(tcp_comm_s, buf, MAX_LINE, 0,(struct sockaddr *) &udp_sin, &udp_cinLength);
-        if (n < 0)
-            error("ERROR in sendto");
+        if((user_len = recv(tcp_comm_s, buf, MAX_LINE, 0)) < 0) error("ERROR in sendto");
 
-        string username = string(buf, userlen);
-        cout << username << endl;
+        string username = string(buf, user_len);
         memset(buf, '\0', sizeof(buf));
         sprintf(buf, "password");
-        n = sendto(tcp_comm_s, buf, strlen(buf), 0, (struct sockaddr *) &udp_cin, udp_cinLength);
-        if (n < 0)
-            error("ERROR in sendto");
+        if( send(tcp_comm_s, buf, strlen(buf), 0) < 0) error("ERROR in sendto");
 
         // receive a datagram from a client
         memset(buf, '\0', sizeof(buf));
-        passwordlen = recvfrom(tcp_comm_s, buf, MAX_LINE, 0,(struct sockaddr *) &udp_sin, &udp_cinLength);
-        if (n < 0)
-            error("ERROR in sendto");
+        if((pwd_len = recv(tcp_comm_s, buf, MAX_LINE, 0)) < 0) error("ERROR in sendto");
 
-        string password = string(buf, passwordlen);
-        cout << password << endl;
-        //if password valid, set client_active = 1 and jump into while loop
+        string password = string(buf, pwd_len);
+        memset(buf, '\0', sizeof(buf));
+        //TODO: check username in table or check for pwd if username exists, then do following and initial connection should be complete
+        //if password valid, set client_active = 1, send acknowledgemnt and jump into while loop
+        //if( send(tcp_comm_s, buf, strlen(buf), 0) < 0) error("Error in sendto");
         client_active = 1;
         while (client_active) {
         }
