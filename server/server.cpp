@@ -22,10 +22,15 @@
 
 using namespace std;
 
+void createBoard(int new_s);
+
 int main(int argc, char *argv[]) {
 	int port, key_len, addr_len, ret_len;
     int s, input_buf_len, i;
     struct sockaddr_in sin;
+    struct sockaddr_in serveraddr; // server's addr
+    struct sockaddr_in clientaddr; // client addr
+    socklen_t addrlen = sizeof(clientaddr);            /* length of addresses */
     string password;
     char buf[MAX_LINE], ret_buf[MAX_LINE];
     port = atoi(argv[1]);
@@ -45,4 +50,13 @@ int main(int argc, char *argv[]) {
         perror("udpserver: bind\n");
         exit(1);
     }
+}
+
+void createBoard(int new_s) {
+
+    recvlen = recvfrom(fd, buf, BUFSIZE, 0, (struct sockaddr *)&clientaddr, &addrlen);
+    if (recvlen < 0)
+        error("ERROR in recvfrom");
+
+
 }
