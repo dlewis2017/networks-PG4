@@ -128,15 +128,17 @@ void pre_reqs(struct sockaddr_in sin, int udp_s, int tcp_s){
     	perror("Receive username client error!\n");
     	exit(1);
     }
-
+    string server_uname_req = string(buf, ibytes);
+    cout << server_uname_req << endl;
+    cout << server_uname_req.length() << endl;
     //check for username being sent
-    if(strcmp(buf,"username")){
-        cout << "Please enter your username: "; 
-        cin >> username;
+    if(server_uname_req == "username"){
+        cout << "Please enter your username: " << endl; 
     } else {
         cout << "username not sent" << endl;
         exit(1);
     }
+    cin >> username;
     //send username back
     if(send(tcp_s,username.c_str(),strlen(username.c_str()),0) == -1){
         perror("client sending username error\n");
@@ -149,13 +151,15 @@ void pre_reqs(struct sockaddr_in sin, int udp_s, int tcp_s){
         exit(1);
     }
     //check for password being sent
-    if(strcmp(buf,"password")){
+    string server_pw_req = string(buf, ibytes);
+    cout << server_pw_req << endl;
+    if(server_pw_req == "password"){
         cout << "Please enter the password: ";
-        cin >> password;
     } else {
         cout << "password request not sent" << endl;
         exit(1);
     }
+    cin >> password;
     //send password
     if(send(tcp_s,password.c_str(),strlen(password.c_str()),0) == -1){
         perror("client sending password error\n");

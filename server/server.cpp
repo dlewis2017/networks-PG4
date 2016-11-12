@@ -37,7 +37,8 @@ void error(string msg) {
 }
 
 int main(int argc, char *argv[]) {
-
+    int server_running = 1; //flags for while conditions
+    int client_active = 0;
     int port;      // port to connect
     int udp_s;  // socket descriptor for udp
     socklen_t udp_cinLength;    // size of udp message
@@ -129,49 +130,42 @@ int main(int argc, char *argv[]) {
         cout << "Connected to client" << endl;
     }
 
-    while (1) {
+    while (server_running) {
 
         memset(buf, '\0', sizeof(buf));
-        sprintf(buf, "Please enter your username: ");
-        n = sendto(tcp_s, buf, MAX_LINE, 0, (struct sockaddr *) &udp_cin, udp_cinLength);
+        sprintf(buf, "username");
+        n = sendto(tcp_comm_s, buf, strlen(buf), 0, (struct sockaddr *) &udp_cin, udp_cinLength);
         if (n < 0)
             error("ERROR in sendto");
 
         // receive a datagram from a client
         memset(buf, '\0', sizeof(buf));
-        userlen = recvfrom(tcp_s, buf, MAX_LINE, 0,(struct sockaddr *) &udp_sin, &udp_cinLength);
+        userlen = recvfrom(tcp_comm_s, buf, MAX_LINE, 0,(struct sockaddr *) &udp_sin, &udp_cinLength);
         if (n < 0)
             error("ERROR in sendto");
 
-        string userName = string(buf, userlen);
-
-
+        string username = string(buf, userlen);
+        cout << username << endl;
         memset(buf, '\0', sizeof(buf));
-        sprintf(buf, "Please enter your password: ");
-        n = sendto(tcp_s, buf, MAX_LINE, 0, (struct sockaddr *) &udp_cin, udp_cinLength);
+        sprintf(buf, "password");
+        n = sendto(tcp_comm_s, buf, strlen(buf), 0, (struct sockaddr *) &udp_cin, udp_cinLength);
         if (n < 0)
             error("ERROR in sendto");
 
         // receive a datagram from a client
         memset(buf, '\0', sizeof(buf));
-        passwordlen = recvfrom(tcp_s, buf, MAX_LINE, 0,(struct sockaddr *) &udp_sin, &udp_cinLength);
+        passwordlen = recvfrom(tcp_comm_s, buf, MAX_LINE, 0,(struct sockaddr *) &udp_sin, &udp_cinLength);
         if (n < 0)
             error("ERROR in sendto");
 
         string password = string(buf, passwordlen);
-
-
-
-        while (1) {
-
-
-
-
+        cout << password << endl;
+        //if password valid, set client_active = 1 and jump into while loop
+        client_active = 1;
+        while (client_active) {
         }
-
-
-
     }
+
 
 }
 
