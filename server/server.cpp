@@ -18,7 +18,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <fstream> 
-#include <unordered_set.h> 
+#include <unordered_set> 
 
 #define MAX_LINE 4096
 #define TEST_PORT 41004
@@ -64,14 +64,14 @@ void print_usage() {
 
 void createBoard(int new_s) {
 
-    int recvlen = recvfrom(fd, buf, MAX_LINE, 0, (struct sockaddr *)&clientaddr, &addrlen);
+    int recvlen = recvfrom(new_s, buf, MAX_LINE, 0, (struct sockaddr *)&clientaddr, &addrlen);
     if (recvlen < 0) {
         error("ERROR in recvfrom");
         exit(1);
     } 
     string boardName = string(buf, recvlen);
 
-    int userlen = recvfrom(fd, buf, MAX_LINE, 0, (struct sockaddr *)&clientaddr, &addrlen);
+    int userlen = recvfrom(new_s, buf, MAX_LINE, 0, (struct sockaddr *)&clientaddr, &addrlen);
     if (userlen < 0) {
         error("ERROR in recvfrom");
         exit(1);
@@ -90,7 +90,7 @@ void createBoard(int new_s) {
         buf = 'Board creation confirmation: 0';
     }
 
-    int n = sendto(sockfd, buf, bufLength, 0, (struct sockaddr *) &clientaddr, clientlen);
+    int n = sendto(new_s, buf, bufLength, 0, (struct sockaddr *) &clientaddr, clientlen);
     if (n < 0)
         error("ERROR in sendto");
 
