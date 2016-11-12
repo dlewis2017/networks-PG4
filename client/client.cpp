@@ -62,14 +62,8 @@ int main(int argc, char* argv[])
     sin.sin_port = htons(port_num);
 
     /*active open*/
-    if((tcp_s = socket(PF_INET, SOCK_STREAM, 0)) < 0){
-        perror("myfrm: tcp socket");
-        exit(1);
-    }
-    if((udp_s = socket(PF_INET, SOCK_DGRAM, 0)) < 0){
-        perror("myfrm: udp socket");
-        exit(1);
-    }
+    if((tcp_s = socket(PF_INET, SOCK_STREAM, 0)) < 0) error("myfrm: tcp socket");
+    if((udp_s = socket(PF_INET, SOCK_DGRAM, 0)) < 0) error("myfrm: udp socket");
    
     printf("Welcome to Client! To quit type \'XIT\'\n");
 
@@ -89,10 +83,7 @@ int main(int argc, char* argv[])
         //send command to server
         buf[MAX_LINE-1]='\0';
         ibytes = strlen(buf) + 1;
-        if(send(udp_s,buf,ibytes,0) == -1){
-            perror("client operation send error!");
-            exit(1);
-        }
+        if(send(udp_s,buf,ibytes,0) == -1) error("client operation send error!");
         //handle operations
         if( handle_request(buf, sin, udp_s, tcp_s) == 0) break;
         bzero((char*)&buf, sizeof(buf));

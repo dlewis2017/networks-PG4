@@ -73,9 +73,7 @@ int main(int argc, char *argv[]) {
     if ((bind(tcp_s, (struct sockaddr *)&sin, sizeof(sin))) < 0) error("myfrmd: bind\n");
 
     /*listen for client connection*/
-    if((listen(tcp_s,1))<0){
-        error("myftpd:listen failed"); 
-    }
+    if((listen(tcp_s,1))<0) error("myftpd:listen failed");
 
     printf("Welcome to TCP Server. \n");
 
