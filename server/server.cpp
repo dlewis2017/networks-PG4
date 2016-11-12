@@ -25,21 +25,30 @@
 
 using namespace std;
 
-unordered_set<string> fileNames;
+int port;      // port to connect
+int udp_s;  // socket descriptor for udp
+socklen_t udp_cinLength;    // size of udp message
+int tcp_s;  // socket descriptor for tcp
+int input_buf_len;  // length of buffer received from client
+struct sockaddr_in udp_sin; // udp server socket address
+struct sockaddr_in udp_cin; // udp client socket address
+struct sockaddr_in tcp_sin; // tcp server socket address
+struct sockaddr_in tcp_cin; // tcp client socket address
+char buf[MAX_LINE]; // buffer to store and send messages
+unordered_set<string> fileNames;    // list of filenames which are the message boards
 
 void createBoard(int new_s);
 void print_usage(); //prints usage to stdout if program invoked incorrectly
 
+void error(string msg) {
+  perror(msg.c_str());
+  exit(1);
+}
 
 int main(int argc, char *argv[]) {
-	int port;      // port to connect
-    int udp_s;  // socket descriptor for udp
-    int tcp_s;  // socket descriptor for tcp
-    int input_buf_len;  // length of buffer received from client
-    struct sockaddr_in udp_sin; // udp socket address
-    struct sockaddr_in tcp_sin; // tcp socket address
+
     string password;    // password for user
-    char buf[MAX_LINE]; // buffer to store and send messages
+
     if (argc != 3) {
         print_usage();
         exit(1);
@@ -78,6 +87,14 @@ int main(int argc, char *argv[]) {
     }
 
 
+
+
+    udp_cinLength = sizeof(udp_cin);
+    while (1) {
+
+
+    }
+
 }
 
 void print_usage() {
@@ -86,23 +103,25 @@ void print_usage() {
 
 void createBoard(int new_s) {
 
-    int recvlen = recvfrom(new_s, buf, MAX_LINE, 0, (struct sockaddr *)&clientaddr, &clientlen);
+    int recvlen, userlen, sendlength, n;
+    char buf[MAX_LINE];
+
+
+    recvlen = recvfrom(new_s, buf, MAX_LINE, 0, (struct sockaddr *)&udp_cin, &udp_cinLength);
     if (recvlen < 0) {
         error("ERROR in recvfrom");
-        exit(1);
     } 
     string boardName = string(buf, recvlen);
     memset(buf, '\0', sizeof(buf));
 
-    int userlen = recvfrom(new_s, buf, MAX_LINE, 0, (struct sockaddr *)&clientaddr, &clientlen);
+    userlen = recvfrom(new_s, buf, MAX_LINE, 0, (struct sockaddr *)&udp_cin, &udp_cinLength);
     if (userlen < 0) {
         error("ERROR in recvfrom");
-        exit(1);
     }
     string userName = string(buf, userlen);
     memset(buf, '\0', sizeof(buf));
 
-    if (filenames.count(boardName) == 0) {
+    if (fileNames.count(boardName) == 0) {
         ofstream messageBoard;
         messageBoard.open(boardName);
         messageBoard << userName;
@@ -115,12 +134,12 @@ void createBoard(int new_s) {
 
     }
 
-    int recvlen = recvfrom(fd, buf, BUFSIZE, 0, (struct sockaddr *)&clientaddr, &clientlen);
+    recvlen = recvfrom(new_s, buf, MAX_LINE, 0, (struct sockaddr *)&udp_cin, &udp_cinLength);
     if (recvlen < 0)
         error("ERROR in recvfrom");
     memset(buf, '\0', sizeof(buf));
 
-    int n = sendto(new_s, buf, bufLength, 0, (struct sockaddr *) &clientaddr, clientlen);
+    n = sendto(new_s, buf, MAX_LINE, 0, (struct sockaddr *) &udp_cin, udp_cinLength);
     if (n < 0)
         error("ERROR in sendto");
     memset(buf, '\0', sizeof(buf));
