@@ -84,7 +84,7 @@ int main(int argc, char* argv[])
     printf("Welcome to Client! To quit type \'XIT\'\n");
 
     /*TCP connect on port*/
-    if(connect(tcp_s,(struct sockaddr*)&tcp_sin,sizeof(tcp_sin))<0){
+    if(connect(tcp_s,(struct sockaddr*)&sin,sizeof(sin))<0){
         perror("simple-talk:connect failed");
         close(tcp_s);
         exit(1);

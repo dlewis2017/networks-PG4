@@ -18,14 +18,14 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <fstream> 
-#include <unordered_set> 
+//#include <unordered_set> 
 
 #define MAX_LINE 4096
 #define TEST_PORT 41004
 
 using namespace std;
 
-unordered_set<string> fileNames;    // list of filenames which are the message boards
+//unordered_set<string> fileNames;    // list of filenames which are the message boards
 
 void createBoard(int new_s);
 void print_usage(); //prints usage to stdout if program invoked incorrectly
@@ -204,7 +204,7 @@ int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in 
     } 
 
 }
-
+/*
 void createBoard(int new_s, struct sockaddr_in udp_cin) {
 
     int recvlen, userlen, sendlength, n;
@@ -249,4 +249,4 @@ void createBoard(int new_s, struct sockaddr_in udp_cin) {
         error("ERROR in sendto");
     memset(buf, '\0', sizeof(buf));
 
-}
+}*/
