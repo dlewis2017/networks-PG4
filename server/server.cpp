@@ -1,7 +1,6 @@
-/* Jack Ryan
- * jryan13
+/* Jack Ryan - jryan13, David Lewis - dlewis12, Chris Beaufils - cbeaufil
  * CSE 30264
- * 9/23/2016
+ * 11/14/2016
  */
 
 #include <time.h>
@@ -18,7 +17,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <fstream> 
-//#include <unordered_set> 
+
 
 #define MAX_LINE 4096
 #define TEST_PORT 41004
@@ -39,41 +38,24 @@ void error(string msg) {
 int main(int argc, char *argv[]) {
     int server_running = 1; //flags for while conditions
     int client_active = 0;
-    int port;      // port to connect
-    int udp_s;  // socket descriptor for udp
-    socklen_t udp_cinLength;    // size of udp message
-    int tcp_s;  // socket descriptor for tcp
-    int input_buf_len;  // length of buffer received from client
-    struct sockaddr_in udp_sin; // udp server socket address
-    struct sockaddr_in udp_cin; // udp client socket address
-    struct sockaddr_in tcp_sin; // tcp server socket address
-    struct sockaddr_in tcp_cin; // tcp client socket address
-    char buf[MAX_LINE]; // buffer to store and send messages
-    int optval;
-    string userName;
-    int userlen;
-    string password;    // password for user
-    int passwordlen;
-    int n;
+    int port, udp_s, tcp_s, optval, user_len, pwd_len, n;
+    socklen_t len;    // size of udp message
+    struct sockaddr_in sin; // udp server socket address
+    char buf[MAX_LINE];
+    string admin_pwd, pwd, user_name;
 
     if (argc != 3) {
         print_usage();
         exit(1);
     }
     port = atoi(argv[1]);
-	password = argv[2];
+	admin_pwd = argv[2];
 
-    //* build UDP address data structure */  
-    bzero((char *)&udp_sin, sizeof(udp_sin));   
-    udp_sin.sin_family = AF_INET;
-    udp_sin.sin_addr.s_addr = INADDR_ANY;
-    udp_sin.sin_port = htons(port);
-
-    //* build TCP address data structure */  
-    bzero((char *)&tcp_sin, sizeof(tcp_sin));   
-    tcp_sin.sin_family = AF_INET;
-    tcp_sin.sin_addr.s_addr = INADDR_ANY;
-    tcp_sin.sin_port = htons(port);
+    //* build address data structure */  
+    bzero((char *)&sin, sizeof(sin));   
+    sin.sin_family = AF_INET;
+    sin.sin_addr.s_addr = INADDR_ANY;
+    sin.sin_port = htons(port);
 
     /* setup passive UDP open */  
     if ((udp_s = socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
@@ -87,29 +69,16 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    /*set udp socket option*/
-    if((setsockopt(udp_s,SOL_SOCKET,SO_REUSEADDR, (char*)&optval,sizeof(int)))<0){
-        perror("myftpd:setscokt");
-        exit(1);
-    }
-
     /*set tcp socket option*/
-    if((setsockopt(tcp_s,SOL_SOCKET,SO_REUSEADDR, (char*)&optval,sizeof(int)))<0){
-        perror("myftpd:setscokt");
-        exit(1);
-    }
+    if((setsockopt(tcp_s,SOL_SOCKET,SO_REUSEADDR, (char*)&optval,sizeof(int)))<0) error("myftpd:setscokt\n");
 
     /* bind UDP socket */
-    if ((bind(udp_s, (struct sockaddr *)&udp_sin, sizeof(udp_sin))) < 0) {
-        perror("myfrmd: bind\n");
-        exit(1);
-    }
+    if ((bind(udp_s, (struct sockaddr *)&sin, sizeof(sin))) < 0) error("myfrmd: bind\n");
 
     /* bind TCP socket */
-    if ((bind(tcp_s, (struct sockaddr *)&tcp_sin, sizeof(tcp_sin))) < 0) {
-        perror("myfrmd: bind\n");
-        exit(1);
-    }
+    if ((bind(tcp_s, (struct sockaddr *)&sin, sizeof(sin))) < 0) error("myfrmd: bind\n");
+
+
 
     if((listen(tcp_s,1))<0){
         perror("myftpd:listen failed");
