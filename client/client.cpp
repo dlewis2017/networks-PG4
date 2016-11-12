@@ -20,6 +20,10 @@
 #define	MAX_LINE 4096
 using namespace std;
 
+void pre_reqs(struct sockaddr_in udp_sin, struct sockaddr_in tcp_sin, int udp_s, int tcp_s);
+int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s); 
+void crt_operation(int s);
+
 int main(int argc, char* argv[])
 {
     /* variable initialization */
@@ -30,8 +34,8 @@ int main(int argc, char* argv[])
     struct sockaddr_in tcp_sin;
     char *host;
     char buf[MAX_LINE]; 
-    int tcp_s, udp_s, ibytes, obytes, port_num;
-    string username, password;
+    int ibytes, tcp_s, udp_s, port_num;
+
 
     if(argc != 3){
         fprintf(stderr,"myfrm: requires 2 arguments (./myfrm server_name port_num)\n");
@@ -69,7 +73,7 @@ int main(int argc, char* argv[])
         exit(1);
     }
    
-    printf("Welcome to Client! To quit type \'Exit\'\n");
+    printf("Welcome to Client! To quit type \'XIT\'\n");
 
     /*TCP connect on port*/
     if(connect(tcp_s,(struct sockaddr*)&tcp_sin,sizeof(tcp_sin))<0){
@@ -85,6 +89,32 @@ int main(int argc, char* argv[])
     }*/
 
     cout << "Connected to server" << endl;
+    pre_reqs(udp_sin,tcp_sin,udp_s,tcp_s);
+
+    cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
+    //main loop: get and send lines of text
+    while(fgets(buf, sizeof(buf),stdin)){
+        //send command to server
+        buf[MAX_LINE-1]='\0';
+        ibytes = strlen(buf) + 1;
+        if(send(udp_s,buf,ibytes,0) == -1){
+            perror("client operation send error!");
+            exit(1);
+        }
+        //handle operations
+        if( handle_request(buf, udp_s, tcp_s) == 0) break;
+        bzero((char*)&buf, sizeof(buf));
+    }
+    close(udp_s);
+    close(tcp_s);
+    exit(0);
+}
+
+void pre_reqs(struct sockaddr_in udp_sin, struct sockaddr_in tcp_sin, int udp_s, int tcp_s){
+    char buf[MAX_LINE];
+    string username, password;
+    int ibytes, obytes;
+
     //wait for username request
     socklen_t addr_len = sizeof(udp_sin);
     if((ibytes = recvfrom(udp_s,buf,sizeof(buf),0, (struct sockaddr *)&udp_sin,&addr_len)) == -1){
@@ -130,28 +160,40 @@ int main(int argc, char* argv[])
         exit(1);
     }
 
-    cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
-    /*main loop: get and send lines of text*/
-    while(fgets(buf, sizeof(buf),stdin)){
-        if(strcmp(buf,"Exit") == 0){
-            printf("Good Bye\n");
-            break;
-        }
-        buf[MAX_LINE-1]='\0';
-        ibytes = strlen(buf) + 1;
-        if(send(udp_s,buf,ibytes,0) == -1){
-            perror("client send error!");
-            exit(1);
-        }
-        //handle operations
-        //handle_request(buf, s);
-        bzero((char*)&buf, sizeof(buf));
-    }
-    close(udp_s);
-    close(tcp_s);
-    exit(0);
+    return;
 }
 
+/*Wrapper function to handle oepration requests*/
+int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s) {
+    if (strncmp(buf, "CRT", 3) == 0) {
+        crt_operation(udp_s);
+        return 1;
+    } else if (strncmp(buf, "LIS", 3) == 0) {
+        return 1;
+    } else if (strncmp(buf, "MSG", 3) == 0) {
+        return 1;
+    } else if (strncmp(buf, "DLT", 3) == 0) {
+        return 1;
+    } else if (strncmp(buf, "RDB", 3) == 0) {
+        return 1;
+    } else if (strncmp(buf, "EDT", 3) == 0) {
+        return 1;
+    } else if (strncmp(buf, "APN", 3) == 0) {
+        return 1;
+    } else if (strncmp(buf, "DWN", 3) == 0) {
+        return 1;
+    } else if (strncmp(buf, "DST", 3) == 0) {
+        return 1;
+    } else if (strncmp(buf, "XIT", 3) == 0) {
+        return 0;
+    } else if (strncmp(buf, "SHT", 3) == 0) {
+        return 1;
+    } 
 
+}
 
+/*does something*/
+void crt_operation(int s){
+
+}
 
