@@ -196,7 +196,11 @@ int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int ud
         return 0;
     } else if (strncmp(buf, "SHT", 3) == 0) {
         return 1;
-    } 
+    }else{
+        cout << "Wrong command" << endl;
+        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
+        return 1;
+    }
 
 }
 
