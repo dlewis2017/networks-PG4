@@ -25,6 +25,8 @@
 
 using namespace std;
 
+unordered_set<string> fileNames;    // list of filenames which are the message boards
+
 void createBoard(int new_s);
 void print_usage(); //prints usage to stdout if program invoked incorrectly
 int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in udp_sin);
@@ -47,7 +49,6 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in tcp_cin; // tcp client socket address
     char buf[MAX_LINE]; // buffer to store and send messages
     int optval;
-    unordered_set<string> fileNames;    // list of filenames which are the message boards
     string userName;
     int userlen;
     string password;    // password for user
@@ -95,6 +96,7 @@ int main(int argc, char *argv[]) {
     if((setsockopt(tcp_s,SOL_SOCKET,SO_REUSEADDR, (char*)&optval,sizeof(int)))<0){
         perror("myftpd:setscokt");
         exit(1);
+    }
 
     /* bind UDP socket */
     if ((bind(udp_s, (struct sockaddr *)&udp_sin, sizeof(udp_sin))) < 0) {
@@ -131,7 +133,7 @@ int main(int argc, char *argv[]) {
 
         // receive a datagram from a client
         memset(buf, '\0', sizeof(buf));
-        userlen = recvfrom(tcp_s, buf, BUFSIZE, 0,(struct sockaddr *) &udp_sin, &udp_cinLength);
+        userlen = recvfrom(tcp_s, buf, MAX_LINE, 0,(struct sockaddr *) &udp_sin, &udp_cinLength);
         if (n < 0)
             error("ERROR in sendto");
 
@@ -146,7 +148,7 @@ int main(int argc, char *argv[]) {
 
         // receive a datagram from a client
         memset(buf, '\0', sizeof(buf));
-        passwordlen = recvfrom(tcp_s, buf, BUFSIZE, 0,(struct sockaddr *) &udp_sin, &udp_cinLength);
+        passwordlen = recvfrom(tcp_s, buf, MAX_LINE, 0,(struct sockaddr *) &udp_sin, &udp_cinLength);
         if (n < 0)
             error("ERROR in sendto");
 
@@ -173,10 +175,7 @@ void print_usage() {
 
 /*Wrapper function to handle oepration requests*/
 int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in udp_sin) {
-    if (strncmp(buf, "CRT", 3) == 0) {
-        crt_operation(udp_s);
-        return 1;
-    } else if (strncmp(buf, "LIS", 3) == 0) {
+    if (strncmp(buf, "LIS", 3) == 0) {
         return 1;
     } else if (strncmp(buf, "MSG", 3) == 0) {
         return 1;
@@ -200,10 +199,11 @@ int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in 
 
 }
 
-void createBoard(int new_s) {
+void createBoard(int new_s, struct sockaddr_in udp_cin) {
 
     int recvlen, userlen, sendlength, n;
     char buf[MAX_LINE];
+    socklen_t udp_cinLength = sizeof(udp_cin);
 
 
     recvlen = recvfrom(new_s, buf, MAX_LINE, 0, (struct sockaddr *)&udp_cin, &udp_cinLength);
