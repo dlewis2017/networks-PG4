@@ -9,8 +9,9 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <stdio.h>
-#include <string.h>
 #include <string>
+#include <string.h>
+#include <iostream>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -27,6 +28,8 @@ using namespace std;
 unordered_set<string> fileNames;
 
 void createBoard(int new_s);
+void print_usage(); //prints usage to stdout if program invoked incorrectly
+
 
 int main(int argc, char *argv[]) {
 	int port, key_len, addr_len, ret_len;
@@ -37,6 +40,10 @@ int main(int argc, char *argv[]) {
     socklen_t addrlen = sizeof(clientaddr);            /* length of addresses */
     string password;
     char buf[MAX_LINE], ret_buf[MAX_LINE];
+    if (argc != 3) {
+        print_usage();
+        exit(1);
+    }
     port = atoi(argv[1]);
 	password = argv[2];
     //* build address data structure */  
@@ -49,11 +56,10 @@ int main(int argc, char *argv[]) {
         perror("udpserver: socket");
         exit(1);
     }
-    /* bind socket */
-    if ((bind(s, (struct sockaddr *)&sin, sizeof(sin))) < 0) {
-        perror("udpserver: bind\n");
-        exit(1);
-    }
+}
+
+void print_usage() {
+    cout << "myfrmd: requires 2 arguments (e.x. ./myfrmd 41004 mysecretpassword" << endl;
 }
 
 void createBoard(int new_s) {
