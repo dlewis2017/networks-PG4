@@ -16,11 +16,15 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <fstream> 
+#include <unordered_set.h> 
 
 #define MAX_LINE 4096
 #define TEST_PORT 41004
 
 using namespace std;
+
+unordered_set<string> fileNames;
 
 void createBoard(int new_s);
 
@@ -54,9 +58,34 @@ int main(int argc, char *argv[]) {
 
 void createBoard(int new_s) {
 
-    recvlen = recvfrom(fd, buf, BUFSIZE, 0, (struct sockaddr *)&clientaddr, &addrlen);
-    if (recvlen < 0)
+    int recvlen = recvfrom(fd, buf, MAX_LINE, 0, (struct sockaddr *)&clientaddr, &addrlen);
+    if (recvlen < 0) {
         error("ERROR in recvfrom");
+        exit(1);
+    } 
+    string boardName = string(buf, recvlen);
 
+    int userlen = recvfrom(fd, buf, MAX_LINE, 0, (struct sockaddr *)&clientaddr, &addrlen);
+    if (userlen < 0) {
+        error("ERROR in recvfrom");
+        exit(1);
+    }
+    string userName = string(buf, userlen);
+
+    if (filenames.count(boardName) == 0) {
+        ofstream messageBoard;
+        messageBoard.open(boardName);
+        messageBoard << userName;
+        messageBoard.close(); 
+
+        fileNames.insert(boardName);
+        buf = 'Board creation confirmation: 1';
+    } else {
+        buf = 'Board creation confirmation: 0';
+    }
+
+    int n = sendto(sockfd, buf, bufLength, 0, (struct sockaddr *) &clientaddr, clientlen);
+    if (n < 0)
+        error("ERROR in sendto");
 
 }
