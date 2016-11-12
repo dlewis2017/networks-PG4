@@ -23,11 +23,9 @@
 
 using namespace std;
 
-<<<<<<< HEAD
 void createBoard(int new_s);
-=======
 void print_usage(); //prints usage to stdout if program invoked incorrectly
->>>>>>> c03adfdcd659a3408da28508e3e4314b6c45c657
+
 
 int main(int argc, char *argv[]) {
 	int port, key_len, addr_len, ret_len;
