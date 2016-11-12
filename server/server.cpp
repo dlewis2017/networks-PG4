@@ -120,8 +120,14 @@ int main(int argc, char *argv[]) {
     udp_cinLength = sizeof(udp_cin);
 
 
-
-
+    socklen_t tcp_len;
+    int tcp_comm_s; //communication socket to be used in comm with the client
+    if((tcp_comm_s = accept(tcp_s,(struct sockaddr*)&tcp_sin,&tcp_len))<0){
+        error("myfrmd: error in accept");
+    }
+    else {
+        cout << "Connected to client" << endl;
+    }
 
     while (1) {
 
