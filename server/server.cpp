@@ -17,7 +17,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <fstream> 
-
+#include <map>
 
 #define MAX_LINE 4096
 #define TEST_PORT 41004
@@ -25,6 +25,7 @@
 using namespace std;
 
 //unordered_set<string> fileNames;    // list of filenames which are the message boards
+map<string,string> user_table;
 
 void createBoard(int new_s);
 void print_usage(); //prints usage to stdout if program invoked incorrectly
@@ -37,12 +38,12 @@ void error(string msg) {
 
 int main(int argc, char *argv[]) {
     int server_running = 1; //flags for while conditions
-    int client_active = 0;
-    int port, udp_s, tcp_s, optval, user_len, pwd_len, n;
+    int port, udp_s, tcp_s, optval, user_len, pwd_len, n, client_active;
     socklen_t len;    // size of udp message
     struct sockaddr_in sin; // udp server socket address
     char buf[MAX_LINE];
     string admin_pwd, pwd, user_name;
+
 
     if (argc != 3) {
         print_usage();
@@ -85,6 +86,7 @@ int main(int argc, char *argv[]) {
     cout << "Connected to client" << endl;
 
     while (server_running) {
+        client_active = 0;
         memset(buf, '\0', sizeof(buf));
         sprintf(buf, "username");
         if( send(tcp_comm_s, buf, strlen(buf), 0) < 0) error("ERROR in sendto");
@@ -94,6 +96,7 @@ int main(int argc, char *argv[]) {
         if((user_len = recv(tcp_comm_s, buf, MAX_LINE, 0)) < 0) error("ERROR in sendto");
 
         string username = string(buf, user_len);
+        //check for username in user_table
         memset(buf, '\0', sizeof(buf));
         sprintf(buf, "password");
         if( send(tcp_comm_s, buf, strlen(buf), 0) < 0) error("ERROR in sendto");
@@ -102,12 +105,20 @@ int main(int argc, char *argv[]) {
         memset(buf, '\0', sizeof(buf));
         if((pwd_len = recv(tcp_comm_s, buf, MAX_LINE, 0)) < 0) error("ERROR in sendto");
 
-        string password = string(buf, pwd_len);
+        string pwd = string(buf, pwd_len);
         memset(buf, '\0', sizeof(buf));
-        //TODO: check username in table or check for pwd if username exists, then do following and initial connection should be complete
-        //if password valid, set client_active = 1, send acknowledgemnt and jump into while loop
-        //if( send(tcp_comm_s, buf, strlen(buf), 0) < 0) error("Error in sendto");
-        client_active = 1;
+
+        //if username in user table check for password and if correct send ack, else add new username with password
+        if (user_table.count(username) == 0) 
+            user_table[username] = pwd;
+        if (user_table[username] == pwd) {
+            client_active = 1;
+            sprintf(buf,"success");
+        }else
+            sprintf(buf,"failed"); 
+        if( send(tcp_comm_s, buf, strlen(buf),0) < 0) error("Error in sending success message after usr/pwd");
+
+        //handles client operations 
         while (client_active) {
         }
     }
