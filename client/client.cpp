@@ -194,6 +194,10 @@ int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s) {
 
 /*does something*/
 void crt_operation(int s){
+    
 
+    cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
+
+    return;
 }
 
