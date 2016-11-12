@@ -32,11 +32,14 @@ void print_usage(); //prints usage to stdout if program invoked incorrectly
 
 
 int main(int argc, char *argv[]) {
-	int port, key_len, addr_len, ret_len;
-    int udp_s, tcp_s, input_buf_len, i;
-    struct sockaddr_in udp_sin, tcp_sin;
-    string password;
-    char buf[MAX_LINE], ret_buf[MAX_LINE];
+	int port;      // port to connect
+    int udp_s;  // socket descriptor for udp
+    int tcp_s;  // socket descriptor for tcp
+    int input_buf_len;  // length of buffer received from client
+    struct sockaddr_in udp_sin; // udp socket address
+    struct sockaddr_in tcp_sin; // tcp socket address
+    string password;    // password for user
+    char buf[MAX_LINE]; // buffer to store and send messages
     if (argc != 3) {
         print_usage();
         exit(1);
@@ -83,19 +86,21 @@ void print_usage() {
 
 void createBoard(int new_s) {
 
-    int recvlen = recvfrom(new_s, buf, MAX_LINE, 0, (struct sockaddr *)&clientaddr, &addrlen);
+    int recvlen = recvfrom(new_s, buf, MAX_LINE, 0, (struct sockaddr *)&clientaddr, &clientlen);
     if (recvlen < 0) {
         error("ERROR in recvfrom");
         exit(1);
     } 
     string boardName = string(buf, recvlen);
+    memset(buf, '\0', sizeof(buf));
 
-    int userlen = recvfrom(new_s, buf, MAX_LINE, 0, (struct sockaddr *)&clientaddr, &addrlen);
+    int userlen = recvfrom(new_s, buf, MAX_LINE, 0, (struct sockaddr *)&clientaddr, &clientlen);
     if (userlen < 0) {
         error("ERROR in recvfrom");
         exit(1);
     }
     string userName = string(buf, userlen);
+    memset(buf, '\0', sizeof(buf));
 
     if (filenames.count(boardName) == 0) {
         ofstream messageBoard;
@@ -104,17 +109,20 @@ void createBoard(int new_s) {
         messageBoard.close(); 
 
         fileNames.insert(boardName);
-        buf = 'Board creation confirmation: 1';
+        sprintf(buf,"Board creation confirmation: 1");
     } else {
-        buf = 'Board creation confirmation: 0';
+        sprintf(buf,"Board creation confirmation: 0");
+
     }
 
-    int recvlen = recvfrom(fd, buf, BUFSIZE, 0, (struct sockaddr *)&clientaddr, &addrlen);
+    int recvlen = recvfrom(fd, buf, BUFSIZE, 0, (struct sockaddr *)&clientaddr, &clientlen);
     if (recvlen < 0)
         error("ERROR in recvfrom");
+    memset(buf, '\0', sizeof(buf));
 
     int n = sendto(new_s, buf, bufLength, 0, (struct sockaddr *) &clientaddr, clientlen);
     if (n < 0)
         error("ERROR in sendto");
+    memset(buf, '\0', sizeof(buf));
 
 }
