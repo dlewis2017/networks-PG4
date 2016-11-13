@@ -38,7 +38,9 @@ void error(string msg) {
 
 int main(int argc, char *argv[]) {
     int server_running = 1; //flags for while conditions
+    int new_client = 1;
     int port, udp_s, tcp_s, optval, user_len, pwd_len, n, client_active, op_len, outcome, admin_pwd_len;
+    int tcp_comm_s; //to be used as new socket for tcp connection
     socklen_t len;    // size of udp message
     struct sockaddr_in sin; // udp server socket address
     char buf[MAX_LINE];
@@ -81,10 +83,11 @@ int main(int argc, char *argv[]) {
     //udp_cinLength = sizeof(sin);
 
     while (server_running) {
-        int tcp_comm_s; //communication socket to be used in comm with the client
-        if((tcp_comm_s = accept(tcp_s,(struct sockaddr*)&sin,&len))<0) error("myfrmd: error in accept");
-            
-        cout << "Connected to client" << endl;
+        if(new_client){
+            if((tcp_comm_s = accept(tcp_s,(struct sockaddr*)&sin,&len))<0) error("myfrmd: error in accept");
+            cout << "Connected to client" << endl;
+            new_client = 0;
+        }
 
         client_active = 0;
         memset(buf, '\0', sizeof(buf));
@@ -120,6 +123,7 @@ int main(int argc, char *argv[]) {
         
         //handles client operations 
         while (client_active) {
+            new_client = 1;
             //wait for operation
             memset(buf, '\0', sizeof(buf));
             if((op_len = recv(tcp_comm_s, buf, MAX_LINE, 0)) < 0) error("Server error in receiving operation\n");
