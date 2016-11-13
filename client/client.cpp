@@ -22,7 +22,7 @@ using namespace std;
 
 int pre_reqs(struct sockaddr_in sin, int udp_s, int tcp_s);
 int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int udp_s); 
-void crt_operation(int s);
+void crt_operation(char buf[MAX_LINE], int s, struct sockaddr_in sin);
 
 int sht_operation(int s);
 void error(string msg){
@@ -155,7 +155,7 @@ int pre_reqs(struct sockaddr_in sin, int udp_s, int tcp_s){
 /*Wrapper function to handle oepration requests*/
 int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int udp_s) {
     if (strncmp(buf, "CRT", 3) == 0) {
-        crt_operation(udp_s);
+        crt_operation(buf,udp_s,sin);
         return 1;
     } else if (strncmp(buf, "LIS", 3) == 0) {
         return 1;
@@ -185,9 +185,23 @@ int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int ud
 
 }
 
-/*does something*/
-void crt_operation(int s){
-    
+/*send crt operation to server, send name of new board, created board returns success or failure and prompts*/
+void crt_operation(char buf[MAX_LINE],int s, struct sockaddr_in sin){
+    string board_name, result;    
+    int buf_len;
+    socklen_t addr_len = sizeof(sin);     
+
+    //send crt operation
+    if(sendto(s,buf,strlen(buf),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending crt operation\n");
+    //ask for name of board to be created
+    cout << "What is the name of the new board to be created?" << endl;
+    cin >> board_name;
+    if(sendto(s,board_name.c_str(),strlen(board_name.c_str()),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending board name\n");
+    //receive confirmation and print results
+    bzero((char*)&buf,sizeof(buf));
+    buf_len = recvfrom(s,buf,sizeof(buf),0, (struct sockaddr *)&sin,&addr_len);	
+    result = string(buf,buf_len);
+    cout << "Create of board was a " << result << endl;
 
     cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
 
