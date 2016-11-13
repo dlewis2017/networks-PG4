@@ -18,7 +18,7 @@
 #include <netdb.h>
 #include <fstream> 
 #include <map>
-
+#include <vector>
 #define MAX_LINE 4096
 #define TEST_PORT 41004
 
@@ -26,7 +26,7 @@ using namespace std;
 
 //unordered_set<string> fileNames;    // list of filenames which are the message boards
 map<string,string> user_table;
-map<string,string> board_table;
+map<string,string> active_boards;
 string currentUser;
 
 
@@ -207,12 +207,12 @@ void createBoard(int s, struct sockaddr_in sin) {
     memset(buf, '\0', sizeof(buf));
 
     //create file, write first line of file to be the user that create the file
-    if (board_table.count(boardName) == 0) {
+    if (active_boards.count(boardName) == 0) {
         fstream outputFile;
         outputFile.open(boardName.c_str(), fstream::in | fstream::out | fstream::app);
         outputFile << currentUser;
         outputFile.close(); 
-        board_table[boardName] = currentUser;
+        active_boards[boardName] = currentUser;
         sprintf(buf,"success");
     } else {
         sprintf(buf,"failure");
