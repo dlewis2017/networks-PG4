@@ -200,7 +200,8 @@ void crt_operation(char buf[MAX_LINE],int s, struct sockaddr_in sin){
     if(sendto(s,board_name.c_str(),strlen(board_name.c_str()),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending board name\n");
     //receive confirmation and print results
     bzero((char*)&buf,sizeof(buf));
-    buf_len = recvfrom(s,buf,sizeof(buf),0, (struct sockaddr *)&sin,&addr_len);	
+    if((buf_len = recvfrom(s,buf,sizeof(buf),0, (struct sockaddr *)&sin,&addr_len)) < 0) error("Client error in receiving confirmation\n");
+    cout << "buf len" << buf_len << endl;
     result = string(buf,buf_len);
     cout << "Create of board was a " << result << endl;
 

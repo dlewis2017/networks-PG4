@@ -26,6 +26,9 @@ using namespace std;
 
 //unordered_set<string> fileNames;    // list of filenames which are the message boards
 map<string,string> user_table;
+map<string,string> board_table;
+string currentUser;
+
 
 void createBoard(int new_s);
 void print_usage(); //prints usage to stdout if program invoked incorrectly
@@ -116,6 +119,7 @@ int main(int argc, char *argv[]) {
             user_table[username] = pwd;
         if (user_table[username] == pwd) {
             client_active = 1;
+            currentUser = username;
             sprintf(buf,"success");
         }else
             sprintf(buf,"failed"); 
@@ -165,7 +169,7 @@ void print_usage() {
 /*Wrapper function to handle oepration requests*/
 int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in sin) {
     if (strncmp(buf, "CRT", 3) == 0) {
-//        createBoard(tcp_s, sin); 
+        createBoard(udp_s, sin); 
         return 1;
     } else if (strncmp(buf, "LIS", 3) == 0) {
         return 1;
@@ -190,38 +194,32 @@ int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in 
     } 
 
 }
-/*
+
 void createBoard(int s, struct sockaddr_in sin) {
 
     int recvlen, userlen, sendlength, n;
     char buf[MAX_LINE];
     socklen_t len = sizeof(sin);
 
-
-    if((recvlen = recvfrom(s, buf, MAX_LINE, 0)) < 0) error("ERROR in recvfrom"); 
+    if((recvlen = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, &len)) < 0) error("Sever error in receving board name\n"); 
     string boardName = string(buf, recvlen);
+    boardName = boardName+".txt";
     memset(buf, '\0', sizeof(buf));
 
-    if((userlen = recvfrom(s, buf, MAX_LINE, 0)) < 0) error("Server receiving error\n");
-    string userName = string(buf, userlen);
-    memset(buf, '\0', sizeof(buf));
-
-    if (user_table.count(boardName) == 0) {
-        ofstream messageBoard;
-        messageBoard.open(boardName);
-        messageBoard << userName;
-        messageBoard.close(); 
-
-        user_table.insert(boardName);
-        sprintf(buf,"Board creation confirmation: 1");
+    //create file, write first line of file to be the user that create the file
+    if (board_table.count(boardName) == 0) {
+        ofstream outputFile;
+        outputFile.open(boardName.c_str());
+        outputFile << currentUser << endl;
+        outputFile.close(); 
+        board_table[boardName] = currentUser;
+        sprintf(buf,"success");
     } else {
-        sprintf(buf,"Board creation confirmation: 0");
+        sprintf(buf,"failure");
 
     }
-
-    if((recvlen = recvfrom(s, buf, MAX_LINE, 0)) < 0) error("Service receiving error\n");
-
-    if( (sendto(s, buf, MAX_LINE, 0)) < 0) error("server sendto error\n");
+    
+    if((sendto(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending confirmation\n");
     memset(buf, '\0', sizeof(buf));
 
-}*/
+}
