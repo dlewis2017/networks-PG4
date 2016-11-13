@@ -97,53 +97,55 @@ int pre_reqs(struct sockaddr_in sin, int udp_s, int tcp_s){
     char buf[MAX_LINE];
     string username, password;
     int ibytes, obytes;
-
-    //wait for username request
-    if((ibytes = recv(tcp_s,buf,sizeof(buf),0)) == -1){
-    	perror("Receive username client error!\n");
-        return -1;
+    while (1) {
+        //wait for username request
+        if((ibytes = recv(tcp_s,buf,sizeof(buf),0)) == -1){
+            perror("Receive username client error!\n");
+            return -1;
+        }
+        string server_uname_req = string(buf, ibytes);
+        //check for username being sent
+        if(server_uname_req == "username"){
+            cout << "Please enter your username: " << endl; 
+        } else {
+            cout << "username not sent" << endl;
+            return -1;
+        }
+        cin >> username;
+        //send username back
+        if(send(tcp_s,username.c_str(),strlen(username.c_str()),0) == -1){
+            perror("client sending username error\n");
+            return -1;
+        }
+        bzero((char*)&buf,sizeof(buf));
+        //wait for password request
+        if((ibytes = recv(tcp_s,buf,sizeof(buf),0)) == -1){
+            perror("Recieve password client error");
+            return -1;
+        }
+        //check for password being sent
+        string server_pw_req = string(buf, ibytes);
+        if(server_pw_req == "password"){
+            cout << "Please enter the password: ";
+        } else {
+            cout << "password request not sent" << endl;
+            return -1;
+        }
+        cin >> password;
+        //send password
+        if(send(tcp_s,password.c_str(),strlen(password.c_str()),0) == -1){
+            perror("client sending password error\n");
+            return -1;
+        }
+        bzero((char*)&buf,sizeof(buf));
+        //wait for acknowledgement
+        if((ibytes = recv(tcp_s,buf,sizeof(buf),0)) == -1){
+            perror("Recieve acknowledgement client error");
+            return -1;
+        }
+        string status = string(buf, ibytes);
+        if (status == "success") break;
     }
-    string server_uname_req = string(buf, ibytes);
-    //check for username being sent
-    if(server_uname_req == "username"){
-        cout << "Please enter your username: " << endl; 
-    } else {
-        cout << "username not sent" << endl;
-        return -1;
-    }
-    cin >> username;
-    //send username back
-    if(send(tcp_s,username.c_str(),strlen(username.c_str()),0) == -1){
-        perror("client sending username error\n");
-        return -1;
-    }
-    bzero((char*)&buf,sizeof(buf));
-    //wait for password request
-    if((ibytes = recv(tcp_s,buf,sizeof(buf),0)) == -1){
-        perror("Recieve password client error");
-        return -1;
-    }
-    //check for password being sent
-    string server_pw_req = string(buf, ibytes);
-    if(server_pw_req == "password"){
-        cout << "Please enter the password: ";
-    } else {
-        cout << "password request not sent" << endl;
-        return -1;
-    }
-    cin >> password;
-    //send password
-    if(send(tcp_s,password.c_str(),strlen(password.c_str()),0) == -1){
-        perror("client sending password error\n");
-        return -1;
-    }
-    bzero((char*)&buf,sizeof(buf));
-    //wait for acknowledgement
-    if((ibytes = recv(tcp_s,buf,sizeof(buf),0)) == -1){
-        perror("Recieve acknowledgement client error");
-        return -1;
-    }
-
     return 1;
 }
 
