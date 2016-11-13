@@ -142,6 +142,11 @@ int main(int argc, char *argv[]) {
                     close(tcp_s);
                     close(udp_s);
                     exit(0); 
+                } else {
+                    memset(buf,'\0',sizeof(buf));
+                    sprintf(buf,"incorrect");
+                    if( send(tcp_comm_s, buf, strlen(buf),0) < 0) error("Server error in sending confirmation\n");
+                    continue; 
                 }
             }else continue;
             
@@ -154,8 +159,11 @@ void print_usage() {
 }
 
 /*Wrapper function to handle oepration requests*/
-int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in udp_sin) {
-    if (strncmp(buf, "LIS", 3) == 0) {
+int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in sin) {
+    if (strncmp(buf, "CRT", 3) == 0) {
+//        createBoard(tcp_s, sin); 
+        return 1;
+    } else if (strncmp(buf, "LIS", 3) == 0) {
         return 1;
     } else if (strncmp(buf, "MSG", 3) == 0) {
         return 1;
@@ -179,48 +187,37 @@ int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in 
 
 }
 /*
-void createBoard(int new_s, struct sockaddr_in udp_cin) {
+void createBoard(int s, struct sockaddr_in sin) {
 
     int recvlen, userlen, sendlength, n;
     char buf[MAX_LINE];
-    socklen_t udp_cinLength = sizeof(udp_cin);
+    socklen_t len = sizeof(sin);
 
 
-    recvlen = recvfrom(new_s, buf, MAX_LINE, 0, (struct sockaddr *)&udp_cin, &udp_cinLength);
-    if (recvlen < 0) {
-        error("ERROR in recvfrom");
-    } 
+    if((recvlen = recvfrom(s, buf, MAX_LINE, 0)) < 0) error("ERROR in recvfrom"); 
     string boardName = string(buf, recvlen);
     memset(buf, '\0', sizeof(buf));
 
-    userlen = recvfrom(new_s, buf, MAX_LINE, 0, (struct sockaddr *)&udp_cin, &udp_cinLength);
-    if (userlen < 0) {
-        error("ERROR in recvfrom");
-    }
+    if((userlen = recvfrom(s, buf, MAX_LINE, 0)) < 0) error("Server receiving error\n");
     string userName = string(buf, userlen);
     memset(buf, '\0', sizeof(buf));
 
-    if (fileNames.count(boardName) == 0) {
+    if (user_table.count(boardName) == 0) {
         ofstream messageBoard;
         messageBoard.open(boardName);
         messageBoard << userName;
         messageBoard.close(); 
 
-        fileNames.insert(boardName);
+        user_table.insert(boardName);
         sprintf(buf,"Board creation confirmation: 1");
     } else {
         sprintf(buf,"Board creation confirmation: 0");
 
     }
 
-    recvlen = recvfrom(new_s, buf, MAX_LINE, 0, (struct sockaddr *)&udp_cin, &udp_cinLength);
-    if (recvlen < 0)
-        error("ERROR in recvfrom");
-    memset(buf, '\0', sizeof(buf));
+    if((recvlen = recvfrom(s, buf, MAX_LINE, 0)) < 0) error("Service receiving error\n");
 
-    n = sendto(new_s, buf, MAX_LINE, 0, (struct sockaddr *) &udp_cin, udp_cinLength);
-    if (n < 0)
-        error("ERROR in sendto");
+    if( (sendto(s, buf, MAX_LINE, 0)) < 0) error("server sendto error\n");
     memset(buf, '\0', sizeof(buf));
 
 }*/
