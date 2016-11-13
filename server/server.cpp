@@ -23,7 +23,14 @@
 #define MAX_LINE 4096
 #define TEST_PORT 41004
 
-using namespace std;
+using std::cout;
+using std::cin;
+using std::endl;
+using std::string;
+using std::map;
+using std::fstream;
+using std::hash;
+using std::to_string;
 
 //unordered_set<string> fileNames;    // list of filenames which are the message boards
 map<string,string> user_table;
@@ -252,7 +259,7 @@ void create_message(int s, struct sockaddr_in sin) {
     }
     /* compute hash, write message to board, return response with hash string */
     size_t hash = hash_fn(message);
-    string hash_str = to_string((int)hash);
+    string hash_str = to_string(static_cast<long long>(hash));
     string message_for_board = currentUser + "|" + hash_str + "|" + message + "\n";
 
     fstream outputFile;
