@@ -148,6 +148,7 @@ int pre_reqs(struct sockaddr_in sin, int udp_s, int tcp_s){
         }
         string status = string(buf, ibytes);
         if (status == "success") break;
+        cout << "Invalid credentials, please try again" << endl;
     }
     return 1;
 }
