@@ -23,6 +23,8 @@ using namespace std;
 int pre_reqs(struct sockaddr_in sin, int udp_s, int tcp_s);
 int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int udp_s); 
 void crt_operation(int s);
+
+int sht_operation(int s);
 void error(string msg){
     perror(msg.c_str());
     exit(1);
@@ -80,12 +82,13 @@ int main(int argc, char* argv[])
     cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
     //main loop: get and send lines of text
     while(fgets(buf, sizeof(buf),stdin)){
+        //TODO: Becuase while loop "please enter operation" prompt always prints after each command or at beginning
         //send command to server
         buf[MAX_LINE-1]='\0';
         ibytes = strlen(buf) + 1;
-        if(send(udp_s,buf,ibytes,0) == -1) error("client operation send error!");
+        if(send(tcp_s,buf,ibytes,0) == -1) error("client operation send error!");
         //handle operations
-        if( handle_request(buf, sin, udp_s, tcp_s) == 0) break;
+        if( handle_request(buf, sin, tcp_s, udp_s) < 1) break;
         bzero((char*)&buf, sizeof(buf));
     }
     close(udp_s);
@@ -126,7 +129,7 @@ int pre_reqs(struct sockaddr_in sin, int udp_s, int tcp_s){
         //check for password being sent
         string server_pw_req = string(buf, ibytes);
         if(server_pw_req == "password"){
-            cout << "Please enter the password: ";
+            cout << "Please enter the password: " << endl;
         } else {
             cout << "password request not sent" << endl;
             return -1;
@@ -173,7 +176,7 @@ int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int ud
     } else if (strncmp(buf, "XIT", 3) == 0) {
         return 0;
     } else if (strncmp(buf, "SHT", 3) == 0) {
-        return 1;
+        return sht_operation(tcp_s);
     }else{
         cout << "Wrong command" << endl;
         cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
@@ -190,4 +193,28 @@ void crt_operation(int s){
 
     return;
 }
+
+/*user asks for password, if same as server admin, server shuts down and so does client
+if password is different, server does not shut down and client is prompted for operation while server waits*/
+int sht_operation(int s){
+    char buf[MAX_LINE];
+    string pwd, admin;
+    int buf_len, ibytes;
+    //ask for password
+    cout << "Please enter the password: ";
+    cin >> pwd;
+    //send password for admin
+    if(send(s,pwd.c_str(),strlen(pwd.c_str()),0) == -1) error("Client error in sending admin password");
+    //receive correct or not from server
+    if((buf_len = recv(s,buf,sizeof(buf),0)) == -1) error("client error in receiving admin password confirmation");
+    //if admin return -1, if not return 1
+    admin = string(buf, buf_len);
+    if (admin == "correct") return 0;
+    else {
+        cout << "Incorrect admin password" << endl;
+        return 1;
+    }
+}
+
+
 

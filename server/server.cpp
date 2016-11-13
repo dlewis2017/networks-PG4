@@ -30,7 +30,7 @@ map<string,string> user_table;
 void createBoard(int new_s);
 void print_usage(); //prints usage to stdout if program invoked incorrectly
 int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in udp_sin);
-
+void createBoard(int new_s, struct sockaddr_in udp_cin);
 void error(string msg) {
   perror(msg.c_str());
   exit(1);
@@ -38,7 +38,7 @@ void error(string msg) {
 
 int main(int argc, char *argv[]) {
     int server_running = 1; //flags for while conditions
-    int port, udp_s, tcp_s, optval, user_len, pwd_len, n, client_active;
+    int port, udp_s, tcp_s, optval, user_len, pwd_len, n, client_active, op_len, outcome, admin_pwd_len;
     socklen_t len;    // size of udp message
     struct sockaddr_in sin; // udp server socket address
     char buf[MAX_LINE];
@@ -80,30 +80,30 @@ int main(int argc, char *argv[]) {
 
     //udp_cinLength = sizeof(sin);
 
-    int tcp_comm_s; //communication socket to be used in comm with the client
-    if((tcp_comm_s = accept(tcp_s,(struct sockaddr*)&sin,&len))<0) error("myfrmd: error in accept");
-        
-    cout << "Connected to client" << endl;
-
     while (server_running) {
+        int tcp_comm_s; //communication socket to be used in comm with the client
+        if((tcp_comm_s = accept(tcp_s,(struct sockaddr*)&sin,&len))<0) error("myfrmd: error in accept");
+            
+        cout << "Connected to client" << endl;
+
         client_active = 0;
         memset(buf, '\0', sizeof(buf));
         sprintf(buf, "username");
-        if( send(tcp_comm_s, buf, strlen(buf), 0) < 0) error("ERROR in sendto");
+        if( send(tcp_comm_s, buf, strlen(buf), 0) < 0) error("ERROR in sendto\n");
 
         // receive a datagram from a client
         memset(buf, '\0', sizeof(buf));
-        if((user_len = recv(tcp_comm_s, buf, MAX_LINE, 0)) < 0) error("ERROR in sendto");
+        if((user_len = recv(tcp_comm_s, buf, MAX_LINE, 0)) < 0) error("ERROR in sendto\n");
 
         string username = string(buf, user_len);
         //check for username in user_table
         memset(buf, '\0', sizeof(buf));
         sprintf(buf, "password");
-        if( send(tcp_comm_s, buf, strlen(buf), 0) < 0) error("ERROR in sendto");
+        if( send(tcp_comm_s, buf, strlen(buf), 0) < 0) error("ERROR in sendto\n");
 
         // receive a datagram from a client
         memset(buf, '\0', sizeof(buf));
-        if((pwd_len = recv(tcp_comm_s, buf, MAX_LINE, 0)) < 0) error("ERROR in sendto");
+        if((pwd_len = recv(tcp_comm_s, buf, MAX_LINE, 0)) < 0) error("ERROR in sendto\n");
 
         string pwd = string(buf, pwd_len);
         memset(buf, '\0', sizeof(buf));
@@ -116,14 +116,37 @@ int main(int argc, char *argv[]) {
             sprintf(buf,"success");
         }else
             sprintf(buf,"failed"); 
-        if( send(tcp_comm_s, buf, strlen(buf),0) < 0) error("Error in sending success message after usr/pwd");
-
+        if( send(tcp_comm_s, buf, strlen(buf),0) < 0) error("Error in sending success message after usr/pwd\n");
+        
         //handles client operations 
         while (client_active) {
+            //wait for operation
+            memset(buf, '\0', sizeof(buf));
+            if((op_len = recv(tcp_comm_s, buf, MAX_LINE, 0)) < 0) error("Server error in receiving operation\n");
+            string operation = string(buf,op_len);
+            //if outcome is 0, return to outer while loop and wait for new client
+            //if outcome is 1, continue inner while loop for operations
+            if((outcome = handle_request(buf,tcp_s,udp_s,sin)) == 0){
+                client_active = 0;
+                break;
+            }else if (outcome == -1){
+                //if outcome is -1, compare admin passwords, if the same, shut down, if not, wait for new operation
+                memset(buf, '\0', sizeof(buf));
+                if((admin_pwd_len = recv(tcp_comm_s, buf, MAX_LINE, 0)) < 0) error("Sever error in receiving admin password from client\n");
+                string admin_pwd_client = string(buf, admin_pwd_len);
+                if (admin_pwd == admin_pwd_client){
+                    memset(buf,'\0',sizeof(buf));
+                    sprintf(buf,"correct");
+                    if( send(tcp_comm_s, buf, strlen(buf),0) < 0) error("Server error in sending confirmation\n");
+                    //delete_everything();
+                    close(tcp_s);
+                    close(udp_s);
+                    exit(0); 
+                }
+            }else continue;
+            
         }
     }
-
-
 }
 
 void print_usage() {
@@ -151,7 +174,7 @@ int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in 
     } else if (strncmp(buf, "XIT", 3) == 0) {
         return 0;
     } else if (strncmp(buf, "SHT", 3) == 0) {
-        return 1;
+        return -1;
     } 
 
 }
