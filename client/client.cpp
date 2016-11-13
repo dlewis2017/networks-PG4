@@ -23,6 +23,7 @@ using namespace std;
 int pre_reqs(struct sockaddr_in sin, int udp_s, int tcp_s);
 int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int udp_s); 
 void crt_operation(int s, struct sockaddr_in sin);
+void msg_operation(int s, struct sockaddr_in sin);
 
 int sht_operation(int s);
 void error(string msg){
@@ -161,6 +162,7 @@ int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int ud
     } else if (strncmp(buf, "LIS", 3) == 0) {
         return 1;
     } else if (strncmp(buf, "MSG", 3) == 0) {
+        msg_operation(udp_s, sin);
         return 1;
     } else if (strncmp(buf, "DLT", 3) == 0) {
         return 1;
@@ -228,6 +230,32 @@ int sht_operation(int s){
         return 1;
     }
 }
+
+/* on MSG, send name of board and message to server */
+void msg_operation(int s, struct sockaddr_in sin) {
+    string board_name, message;
+    socklen_t addr_len = sizeof(sin);     
+    char buf[MAX_LINE];
+    int buf_len;
+    cout << "Enter the name of the board to leave a message on: ";
+    cin >> board_name;
+    if (sendto(s,board_name.c_str(),strlen(board_name.c_str()),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending board name\n");
+    cout << "Enter the message to send: ";
+    cin >> message;
+    if (sendto(s,message.c_str(),strlen(message.c_str()),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending message\n");
+    if ((buf_len = recvfrom(s,buf,sizeof(buf),0, (struct sockaddr *)&sin,&addr_len)) < 0) error("Client error in receiving message acknowledgement\n");
+    string result = string(buf, buf_len);
+    memset(buf, '\0', sizeof(buf));
+    if (result == "failed") {
+        cout << "Failed: " << board_name << " does not exist on server" << endl;
+        return;
+    }
+    cout << "Success: your message (identification number: " << result << ") has been posted to " << board_name << endl;
+}
+
+
+
+    
 
 
 

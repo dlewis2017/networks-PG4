@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <stdio.h>
 #include <string>
+#include <functional>
 #include <string.h>
 #include <iostream>
 #include <stdlib.h>
@@ -34,6 +35,8 @@ void createBoard(int new_s);
 void print_usage(); //prints usage to stdout if program invoked incorrectly
 int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in udp_sin);
 void createBoard(int new_s, struct sockaddr_in udp_cin);
+void create_message(int s, struct sockaddr_in sin);
+
 void error(string msg) {
   perror(msg.c_str());
   exit(1);
@@ -174,6 +177,7 @@ int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in 
     } else if (strncmp(buf, "LIS", 3) == 0) {
         return 1;
     } else if (strncmp(buf, "MSG", 3) == 0) {
+        create_message(udp_s, sin);
         return 1;
     } else if (strncmp(buf, "DLT", 3) == 0) {
         return 1;
@@ -211,6 +215,7 @@ void createBoard(int s, struct sockaddr_in sin) {
         fstream outputFile;
         outputFile.open(boardName.c_str(), fstream::in | fstream::out | fstream::app);
         outputFile << currentUser;
+        outputFile << "\n";
         outputFile.close(); 
         active_boards[boardName] = currentUser;
         sprintf(buf,"success");
@@ -222,4 +227,40 @@ void createBoard(int s, struct sockaddr_in sin) {
     if((sendto(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending confirmation\n");
     memset(buf, '\0', sizeof(buf));
 
+}
+
+void create_message(int s, struct sockaddr_in sin) {
+    hash<string> hash_fn;//hash function for string ids
+    socklen_t len = sizeof(sin);
+    char buf[MAX_LINE], ret_buf[MAX_LINE];
+    int recvlen;
+
+    if((recvlen = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, &len)) < 0) error("Sever error in receving board name\n"); 
+    string board_name = string(buf, recvlen);
+    board_name += ".txt";
+    memset(buf, '\0', sizeof(buf));
+
+    if((recvlen = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, &len)) < 0) error("Sever error in receving message\n"); 
+    string message = string(buf, recvlen);
+    memset(buf, '\0', sizeof(buf));
+    if (active_boards.count(board_name) == 0) {
+        string fail_msg = "failed";
+        int fail_msg_len = fail_msg.length();
+        sprintf(ret_buf, "failed");
+        if((sendto(s, fail_msg.c_str(), fail_msg_len, 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending failure status\n");
+        return;
+    }
+    /* compute hash, write message to board, return response with hash string */
+    size_t hash = hash_fn(message);
+    string hash_str = to_string((int)hash);
+    string message_for_board = currentUser + "|" + hash_str + "|" + message + "\n";
+
+    fstream outputFile;
+    outputFile.open(board_name.c_str(), fstream::in | fstream::out | fstream::app);
+    outputFile << message_for_board;
+    outputFile.close();
+
+    int hash_str_len = hash_str.length();
+    sprintf(ret_buf, hash_str.c_str());
+    if((sendto(s, ret_buf, hash_str_len, 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending hash\n");
 }
