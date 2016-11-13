@@ -208,9 +208,9 @@ void createBoard(int s, struct sockaddr_in sin) {
 
     //create file, write first line of file to be the user that create the file
     if (board_table.count(boardName) == 0) {
-        ofstream outputFile;
-        outputFile.open(boardName.c_str());
-        outputFile << currentUser << endl;
+        fstream outputFile;
+        outputFile.open(boardName.c_str(), fstream::in | fstream::out | fstream::app);
+        outputFile << currentUser;
         outputFile.close(); 
         board_table[boardName] = currentUser;
         sprintf(buf,"success");
@@ -218,7 +218,7 @@ void createBoard(int s, struct sockaddr_in sin) {
         sprintf(buf,"failure");
 
     }
-    
+    cout << buf << endl;
     if((sendto(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending confirmation\n");
     memset(buf, '\0', sizeof(buf));
 
