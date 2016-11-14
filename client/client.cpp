@@ -25,6 +25,7 @@ int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int ud
 void crt_operation(int s, struct sockaddr_in sin);
 void msg_operation(int s, struct sockaddr_in sin);
 void dst_operation(int s, struct sockaddr_in sin);
+void dlt_operation(int s, struct sockaddr_in sin);
 
 int sht_operation(int s);
 void error(string msg){
@@ -111,7 +112,7 @@ int pre_reqs(struct sockaddr_in sin, int udp_s, int tcp_s){
         string server_uname_req = string(buf, ibytes);
         //check for username being sent
         if(server_uname_req == "username"){
-            cout << "Please enter your username: " << endl; 
+            cout << "Please enter your username: ";
         } else {
             cout << "username not sent" << endl;
             return -1;
@@ -131,7 +132,7 @@ int pre_reqs(struct sockaddr_in sin, int udp_s, int tcp_s){
         //check for password being sent
         string server_pw_req = string(buf, ibytes);
         if(server_pw_req == "password"){
-            cout << "Please enter the password: " << endl;
+            cout << "Please enter the password: ";
         } else {
             cout << "password request not sent" << endl;
             return -1;
@@ -169,6 +170,7 @@ int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int ud
         cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
         return 1;
     } else if (strncmp(buf, "DLT", 3) == 0) {
+        dlt_operation(udp_s, sin);
         cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
         return 1;
     } else if (strncmp(buf, "RDB", 3) == 0) {
@@ -260,6 +262,28 @@ void msg_operation(int s, struct sockaddr_in sin) {
         return;
     }
     cout << "Success: your message (identification number: " << result << ") has been posted to " << board_name << endl;
+}
+
+/* on DLT, delete message and send response */
+void dlt_operation(int s, struct sockaddr_in sin) {
+    string board_name, message_id;
+    socklen_t addr_len = sizeof(sin);     
+    char buf[MAX_LINE];
+    int buf_len;
+    cout << "Enter the name of the board to delete a message from: ";
+    cin >> board_name;
+    if (sendto(s,board_name.c_str(),strlen(board_name.c_str()),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending board name\n");
+    cout << "Enter the message ID to delete: ";
+    cin >> message_id;
+    if (sendto(s,message_id.c_str(),strlen(message_id.c_str()),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending message\n");
+    if ((buf_len = recvfrom(s,buf,sizeof(buf),0, (struct sockaddr *)&sin,&addr_len)) < 0) error("Client error in receiving message acknowledgement\n");
+    string result = string(buf, buf_len);
+    memset(buf, '\0', sizeof(buf));
+    if (result == "failed") {
+        cout << "Failed: " << board_name << " does not exist on server" << endl;
+        return;
+    }
+    cout << "Success: your message (identification number: " << message_id << ") has been deleted from " << board_name << endl;
 }
 
 /*Destroy a board (file)*/

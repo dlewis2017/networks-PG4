@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <stdio.h>
 #include <string>
+#include <sstream>
 #include <functional>
 #include <string.h>
 #include <iostream>
@@ -31,6 +32,7 @@ using std::map;
 using std::fstream;
 using std::hash;
 using std::to_string;
+using std::stringstream;
 
 //unordered_set<string> fileNames;    // list of filenames which are the message boards
 map<string,string> user_table;
@@ -44,6 +46,7 @@ int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in 
 void createBoard(int new_s, struct sockaddr_in udp_cin);
 void create_message(int s, struct sockaddr_in sin);
 void dst_operation(int s, struct sockaddr_in sin);
+void dlt_operation(int s, struct sockaddr_in sin);
 
 void error(string msg) {
   perror(msg.c_str());
@@ -181,31 +184,23 @@ void print_usage() {
 int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in sin) {
     if (strncmp(buf, "CRT", 3) == 0) {
         createBoard(udp_s, sin); 
-        return 1;
     } else if (strncmp(buf, "LIS", 3) == 0) {
-        return 1;
     } else if (strncmp(buf, "MSG", 3) == 0) {
         create_message(udp_s, sin);
-        return 1;
     } else if (strncmp(buf, "DLT", 3) == 0) {
-        return 1;
+        dlt_operation(udp_s, sin);
     } else if (strncmp(buf, "RDB", 3) == 0) {
-        return 1;
     } else if (strncmp(buf, "EDT", 3) == 0) {
-        return 1;
     } else if (strncmp(buf, "APN", 3) == 0) {
-        return 1;
     } else if (strncmp(buf, "DWN", 3) == 0) {
-        return 1;
     } else if (strncmp(buf, "DST", 3) == 0) {
         dst_operation(udp_s,sin);
-        return 1;
     } else if (strncmp(buf, "XIT", 3) == 0) {
         return 0;
     } else if (strncmp(buf, "SHT", 3) == 0) {
         return -1;
     } 
-
+    return 1;
 }
 
 void createBoard(int s, struct sockaddr_in sin) {
@@ -261,7 +256,9 @@ void create_message(int s, struct sockaddr_in sin) {
     }
     /* compute hash, write message to board, return response with hash string */
     size_t hash = hash_fn(message);
-    string hash_str = to_string(static_cast<long long>(hash));
+    stringstream ss;
+    ss << hash;
+    string hash_str = ss.str();
     string message_for_board = currentUser + "|" + hash_str + "|" + message + "\n";
 
     fstream outputFile;
@@ -272,6 +269,30 @@ void create_message(int s, struct sockaddr_in sin) {
     int hash_str_len = hash_str.length();
     sprintf(ret_buf, hash_str.c_str());
     if((sendto(s, ret_buf, hash_str_len, 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending hash\n");
+}
+
+/* delete a message given message ID and board */
+void dlt_operation(int s, struct sockaddr_in sin) {
+    hash<string> hash_fn;//hash function for string ids
+    socklen_t len = sizeof(sin);
+    char buf[MAX_LINE], ret_buf[MAX_LINE];
+    int recvlen;
+
+    if((recvlen = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, &len)) < 0) error("Sever error in receving board name\n"); 
+    string board_name = string(buf, recvlen);
+    memset(buf, '\0', sizeof(buf));
+
+    if((recvlen = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, &len)) < 0) error("Sever error in receving message ID\n"); 
+    string message_id = string(buf, recvlen);
+    memset(buf, '\0', sizeof(buf));
+    if (active_boards.count(board_name) == 0) {
+        string fail_msg = "failed";
+        int fail_msg_len = fail_msg.length();
+        sprintf(ret_buf, "failed");
+        if((sendto(s, fail_msg.c_str(), fail_msg_len, 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending failure status\n");
+        return;
+    }
+    /* find message ID in board, delete line */
 }
 
 /*receive board name and destroy(delete) it from all of the boards*/
