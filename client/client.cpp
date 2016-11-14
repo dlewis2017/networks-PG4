@@ -3,7 +3,7 @@
   client.c
   Client for connecting with username and password and running commands
 */
-
+//TODO:SHT should delete everything
 #include <sys/time.h>
 #include <fstream>
 #include <sys/stat.h>
@@ -24,6 +24,7 @@ int pre_reqs(struct sockaddr_in sin, int udp_s, int tcp_s);
 int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int udp_s); 
 void crt_operation(int s, struct sockaddr_in sin);
 void msg_operation(int s, struct sockaddr_in sin);
+void dst_operation(int s, struct sockaddr_in sin);
 
 int sht_operation(int s);
 void error(string msg){
@@ -158,23 +159,33 @@ int pre_reqs(struct sockaddr_in sin, int udp_s, int tcp_s){
 int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int udp_s) {
     if (strncmp(buf, "CRT", 3) == 0) {
         crt_operation(udp_s,sin);
+        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
         return 1;
     } else if (strncmp(buf, "LIS", 3) == 0) {
+        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
         return 1;
     } else if (strncmp(buf, "MSG", 3) == 0) {
         msg_operation(udp_s, sin);
+        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
         return 1;
     } else if (strncmp(buf, "DLT", 3) == 0) {
+        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
         return 1;
     } else if (strncmp(buf, "RDB", 3) == 0) {
+        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
         return 1;
     } else if (strncmp(buf, "EDT", 3) == 0) {
+        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
         return 1;
     } else if (strncmp(buf, "APN", 3) == 0) {
+        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
         return 1;
     } else if (strncmp(buf, "DWN", 3) == 0) {
+        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
         return 1;
     } else if (strncmp(buf, "DST", 3) == 0) {
+        dst_operation(udp_s,sin);
+        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
         return 1;
     } else if (strncmp(buf, "XIT", 3) == 0) {
         return 0;
@@ -203,8 +214,6 @@ void crt_operation(int s, struct sockaddr_in sin){
     if((buf_len = recvfrom(s,buf,sizeof(buf),0, (struct sockaddr *)&sin,&addr_len)) < 0) error("Client error in receiving confirmation\n");
     result = string(buf,buf_len);
     cout << "Creation of board was a " << result << endl;
-
-    cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
 
     return;
 }
@@ -253,9 +262,21 @@ void msg_operation(int s, struct sockaddr_in sin) {
     cout << "Success: your message (identification number: " << result << ") has been posted to " << board_name << endl;
 }
 
-
-
-    
-
+/*Destroy a board (file)*/
+void dst_operation(int s, struct sockaddr_in sin){
+    string board_name, response;
+    socklen_t addr_len = sizeof(sin);
+    char buf[MAX_LINE];
+    int buf_len;
+   
+    //ask for and then send board name to be destroyed 
+    cout << "Please enter the name of the board you would like to destroy: " << endl;
+    cin >> board_name;
+    if(sendto(s,board_name.c_str(),strlen(board_name.c_str()),0,(struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending board name\n");
+    //receive confirmation
+    if ((buf_len = recvfrom(s,buf,sizeof(buf),0,(struct sockaddr*)&sin, &addr_len)) < 0) error("Client error in receiving dst operation acknowledgement\n"); 
+    response = string(buf,buf_len);
+    cout << "Message from server upon request to destroy board " << board_name << ": " << response << endl;
+}
 
 

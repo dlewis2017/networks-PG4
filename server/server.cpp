@@ -38,11 +38,12 @@ map<string,string> active_boards;
 string currentUser;
 
 
-void createBoard(int new_s);
+//void createBoard(int new_s);
 void print_usage(); //prints usage to stdout if program invoked incorrectly
 int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in udp_sin);
 void createBoard(int new_s, struct sockaddr_in udp_cin);
 void create_message(int s, struct sockaddr_in sin);
+void dst_operation(int s, struct sockaddr_in sin);
 
 void error(string msg) {
   perror(msg.c_str());
@@ -197,6 +198,7 @@ int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in 
     } else if (strncmp(buf, "DWN", 3) == 0) {
         return 1;
     } else if (strncmp(buf, "DST", 3) == 0) {
+        dst_operation(udp_s,sin);
         return 1;
     } else if (strncmp(buf, "XIT", 3) == 0) {
         return 0;
@@ -214,7 +216,7 @@ void createBoard(int s, struct sockaddr_in sin) {
 
     if((recvlen = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, &len)) < 0) error("Sever error in receving board name\n"); 
     string boardName = string(buf, recvlen);
-    boardName = boardName+".txt";
+//    boardName = boardName+".txt";
     memset(buf, '\0', sizeof(buf));
 
     //create file, write first line of file to be the user that create the file
@@ -244,7 +246,7 @@ void create_message(int s, struct sockaddr_in sin) {
 
     if((recvlen = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, &len)) < 0) error("Sever error in receving board name\n"); 
     string board_name = string(buf, recvlen);
-    board_name += ".txt";
+//    board_name += ".txt";
     memset(buf, '\0', sizeof(buf));
 
     if((recvlen = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, &len)) < 0) error("Sever error in receving message\n"); 
@@ -271,3 +273,48 @@ void create_message(int s, struct sockaddr_in sin) {
     sprintf(ret_buf, hash_str.c_str());
     if((sendto(s, ret_buf, hash_str_len, 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending hash\n");
 }
+
+/*receive board name and destroy(delete) it from all of the boards*/
+
+void dst_operation(int s, struct sockaddr_in sin){
+    hash<string> hash_fn;
+    string board_name, delete_cmd;
+    char buf[MAX_LINE];
+    int buf_len;
+    socklen_t len = sizeof(sin);
+
+    //receive name of board
+    if((buf_len = recvfrom(s,buf,sizeof(buf),0,(struct sockaddr*)&sin, &len)) < 0) error("Server error in receiving name of board in dst\n");
+    board_name = string(buf,buf_len);
+    delete_cmd = "exec rm -r ./" + board_name;
+    memset(buf, '\0', sizeof(buf));
+    //check if board exists, if it does, check if current user created board and delete it
+    if (active_boards.find(board_name) == active_boards.end()) sprintf(buf,"Board not found\n");
+    else{
+        if (active_boards[board_name] == currentUser){
+            active_boards.erase(board_name);
+            system(delete_cmd.c_str());
+            sprintf(buf,"Board has been deleted");
+        }else{
+            sprintf(buf,"Nacho board\n");
+        }
+    }
+/*
+    ifstream infile(board_name);
+    if (infile.good()){
+        getline(infile, creator);
+        cout << "creator is " << creator << endl;
+    }else sprintf(buf,"Table does not exist");
+    infile.close();
+    if (currentUser == creator){
+        //delete from hash table and from directory
+        active_boards.erase(board_name);
+        
+    } else sprintf(buf,"Nacho table");
+*/
+    if((sendto(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending response to dst table\n");
+
+    cout << "Waiting for command" << endl;    
+
+}
+
