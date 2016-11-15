@@ -26,9 +26,9 @@ void crt_operation(int s, struct sockaddr_in sin);
 void msg_operation(int s, struct sockaddr_in sin);
 void dst_operation(int s, struct sockaddr_in sin);
 void dlt_operation(int s, struct sockaddr_in sin);
-void lis_operation(int s, struct sockaddr_in sin);
+//void lis_operation(int s, struct sockaddr_in sin);
 void edt_operation(int s, struct sockaddr_in sin);
-void dwn_operation(int s);
+//void dwn_operation(int s);
 
 int sht_operation(int s);
 void error(string msg){
@@ -84,11 +84,11 @@ int main(int argc, char* argv[])
 
     cout << "Connected to server" << endl;
     if(!pre_reqs(sin,udp_s,tcp_s)) error("Problem with username and password. Goodbye");
-
-
+    int c;
+    cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT): ";
+    while ( (c = getchar()) != '\n' && c != EOF );
     //main loop: get and send lines of text
     while(fgets(buf, sizeof(buf),stdin)){
-        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
         //send command to server
         buf[MAX_LINE-1]='\0';
         ibytes = strlen(buf) + 1;
@@ -96,6 +96,8 @@ int main(int argc, char* argv[])
         //handle operations
         if( handle_request(buf, sin, tcp_s, udp_s) < 1) break;
         bzero((char*)&buf, sizeof(buf));
+        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT): ";
+        while ( (c = getchar()) != '\n' && c != EOF );
     }
     close(udp_s);
     close(tcp_s);
@@ -164,7 +166,7 @@ int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int ud
     if (strncmp(buf, "CRT", 3) == 0) {
         crt_operation(udp_s,sin);
     } else if (strncmp(buf, "LIS", 3) == 0) {
-        lis_operation(udp_s, sin);
+        //lis_operation(udp_s, sin);
     } else if (strncmp(buf, "MSG", 3) == 0) {
         msg_operation(udp_s, sin);
     } else if (strncmp(buf, "DLT", 3) == 0) {
@@ -174,7 +176,7 @@ int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int ud
         edt_operation(udp_s, sin);
     } else if (strncmp(buf, "APN", 3) == 0) {
     } else if (strncmp(buf, "DWN", 3) == 0) {
-        dwn_operation(tcp_s);
+        //dwn_operation(tcp_s);
     } else if (strncmp(buf, "DST", 3) == 0) {
         dst_operation(udp_s,sin);
     } else if (strncmp(buf, "XIT", 3) == 0) {
@@ -198,7 +200,7 @@ void crt_operation(int s, struct sockaddr_in sin){
     socklen_t addr_len = sizeof(sin);     
 
     //ask for name of board to be created
-    cout << "What is the name of the new board to be created?" << endl;
+    cout << "Enter the name of the new board to be created: ";
     cin >> board_name;
     if(sendto(s,board_name.c_str(),strlen(board_name.c_str()),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending board name\n");
     //receive confirmation and print results
@@ -316,8 +318,7 @@ void dst_operation(int s, struct sockaddr_in sin){
     response = string(buf,buf_len);
     cout << "Message from server upon request to destroy board " << board_name << ": " << response << endl;
 }
-
-/*Sends file in chunks to client*/
+/*
 void dwn_operation(int s){
     string board_name;
     char buf[MAX_LINE];
@@ -331,3 +332,4 @@ void dwn_operation(int s){
 
 
 }
+*/
