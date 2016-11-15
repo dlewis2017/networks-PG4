@@ -35,10 +35,12 @@ using std::hash;
 using std::to_string;
 using std::vector;
 using std::stringstream;
+using std::ofstream;
 
 //unordered_set<string> fileNames;    // list of filenames which are the message boards
 map<string,string> user_table;
 map<string,string> active_boards;
+vector<string> appendedFiles;
 string currentUser;
 
 
@@ -50,6 +52,7 @@ void create_message(int s, struct sockaddr_in sin);
 void edt_operation(int s, struct sockaddr_in sin);
 void dst_operation(int s, struct sockaddr_in sin);
 void dlt_operation(int s, struct sockaddr_in sin);
+void apn_operation(int s);
 void dwn_operation(int s);
 void lis_operation(int s, struct sockaddr_in sin);
 
@@ -155,7 +158,7 @@ int main(int argc, char *argv[]) {
             string operation = string(buf,op_len);
             //if outcome is 0, return to outer while loop and wait for new client
             //if outcome is 1, continue inner while loop for operations
-            if((outcome = handle_request(buf,tcp_s,udp_s,sin)) == 0){
+            if((outcome = handle_request(buf,tcp_comm_s,udp_s,sin)) == 0){
                 client_active = 0;
                 break;
             }else if (outcome == -1){
@@ -201,6 +204,7 @@ int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in 
     } else if (strncmp(buf, "EDT", 3) == 0) {
         edt_operation(udp_s,sin);
     } else if (strncmp(buf, "APN", 3) == 0) {
+		apn_operation(tcp_s);
     } else if (strncmp(buf, "DWN", 3) == 0) {
         dwn_operation(tcp_s);
     } else if (strncmp(buf, "DST", 3) == 0) {
@@ -370,6 +374,7 @@ void edt_operation(int s, struct sockaddr_in sin) {
     string new_message = string(buf, recvlen);
     memset(buf, '\0', sizeof(buf));
 
+	// check if the board exists
     if (active_boards.count(board_name) == 0) {
         string fail_msg = "failed";
         int fail_msg_len = fail_msg.length();
@@ -434,16 +439,93 @@ void edt_operation(int s, struct sockaddr_in sin) {
 void lis_operation(int s, struct sockaddr_in sin) {
     socklen_t len = sizeof(sin);
     string boardNames = "";
+	int boardNames_len = 0;
 
     for (auto it = active_boards.begin(); it != active_boards.end(); it++) {
         boardNames += it->first + '\n';
+		boardNames_len += it->first.length();
     }
-    cout << boardNames;
 
-    int boardNames_len = boardNames.length();
+	cout << "boardname: " << boardNames << "board length: " << boardNames_len << endl;
+
     if((sendto(s, boardNames.c_str(), boardNames_len, 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending boardNames\n");
 
 	cout << "send boardnames" << endl;
+
+}
+
+void apn_operation(int s) {
+    char buf[MAX_LINE], ret_buf[MAX_LINE];
+	struct stat st;
+    int recvlen, fileSize;
+	size_t readsoFar = 0;
+	string appendFile, copy;
+    string fail_msg = "failed";
+	string found = "fileexists";
+	string success_msg = "success";
+	int fail_msg_len = fail_msg.length();
+	int success_msg_len = success_msg.length();
+
+    // receive the name of the board
+    if((recvlen = recv(s, buf, sizeof(buf), 0)) < 0) error("Server error in receving board name\n"); 
+    string board_name = string(buf, recvlen);
+    memset(buf, '\0', sizeof(buf));
+
+    // receive the message ID
+    if((recvlen = recv(s, buf, sizeof(buf), 0)) < 0) error("Server error in receving message ID\n"); 
+    string new_file = string(buf, recvlen);
+    memset(buf, '\0', sizeof(buf));
+
+	appendFile = board_name + "-" + new_file;
+
+	// check if the board exists, send confirmation
+    if (active_boards.count(board_name) == 0) {
+        if((send(s, fail_msg.c_str(), fail_msg_len, 0)) == -1) error("Server error in sending failure status\n");
+        return;
+    } else if (stat(new_file.c_str(), &st) == 0) {
+		// FILE ALREADY	EXISTS
+		if (send(s, found.c_str(), found.length(),0) == -1) error("Server error in sending failure status.\n");
+		cout << "File already exists!" << endl;
+		return;
+	} else { 
+        if((send(s, success_msg.c_str(), success_msg_len, 0)) == -1) error("Server error in sending failure status\n");
+	}
+
+    // if the file exists, receive the file Size
+    if((recvlen = recv(s, buf, sizeof(buf), 0)) < 0) error("Server error in receving message ID\n");
+	string result = string(buf,recvlen);
+	if (result == "-1") {
+		cout << "User could not find file. APN aborted." << endl;
+		return;
+	} else {
+		fileSize = atoi(buf); 
+	    memset(buf, '\0', sizeof(buf));
+	}
+
+	// read in the file, write to the appended file
+	fstream outputFile;
+    outputFile.open(appendFile.c_str(), fstream::in | fstream::out | fstream::app);
+    while (readsoFar < fileSize) {
+		if ((recvlen=recv(s,buf,sizeof(buf),0)) == -1) error("Server receiving error!\n");
+		copy = string(buf, recvlen);
+        outputFile << copy;
+		readsoFar += recvlen;
+		memset(buf, '\0', MAX_LINE);
+
+    }
+    outputFile.close();
+
+	// keep track of appended files
+	appendedFiles.push_back(appendFile);
+
+	// Write message to board with original filename and the user that attached it
+    string message_for_board = new_file + "|" + currentUser + "\n";
+	fstream board;
+    board.open(board_name.c_str(), fstream::in | fstream::out | fstream::app);
+    board << message_for_board;
+    board.close();
+
+	if((send(s, success_msg.c_str(), success_msg_len, 0)) == -1) error("Server error in sending failure status\n");
 
 }
 

@@ -24,13 +24,15 @@ int pre_reqs(struct sockaddr_in sin, int udp_s, int tcp_s);
 int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int udp_s); 
 void crt_operation(int s, struct sockaddr_in sin);
 void msg_operation(int s, struct sockaddr_in sin);
-void dst_operation(int s, struct sockaddr_in sin);
 void dlt_operation(int s, struct sockaddr_in sin);
-void lis_operation(int s, struct sockaddr_in sin);
 void edt_operation(int s, struct sockaddr_in sin);
+void lis_operation(int s, struct sockaddr_in sin);
+// void rdb_operation(int s, struct sockaddr_in sin);
+void apn_operation(int s);
 //void dwn_operation(int s);
-
+void dst_operation(int s, struct sockaddr_in sin);
 int sht_operation(int s);
+
 void error(string msg){
     perror(msg.c_str());
     exit(1);
@@ -175,6 +177,7 @@ int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int ud
     } else if (strncmp(buf, "EDT", 3) == 0) {
         edt_operation(udp_s, sin);
     } else if (strncmp(buf, "APN", 3) == 0) {
+		apn_operation(tcp_s);
     } else if (strncmp(buf, "DWN", 3) == 0) {
     } else if (strncmp(buf, "DST", 3) == 0) {
         dst_operation(udp_s,sin);
@@ -262,6 +265,8 @@ void lis_operation(int s, struct sockaddr_in sin) {
 
 	cout << "IN lis" << endl;
 
+
+	memset(buf, '\0', sizeof(buf));
 	if (recv_len = recvfrom(s,buf,sizeof(buf),0, (struct sockaddr *)&sin,&addr_len) < 0) error("Client error in receiving board listing\n");
 	string boardListing = string(buf);
 
@@ -342,6 +347,65 @@ void dst_operation(int s, struct sockaddr_in sin){
     response = string(buf,buf_len);
     cout << "Message from server upon request to destroy board " << board_name << ": " << response << endl;
 }
+
+void apn_operation(int s) {
+	FILE *fp;
+    string board_name, new_file;
+	struct stat st;    
+    char buf[MAX_LINE];
+    int buf_len, newFile_size;
+	string not_found = "-1";
+	string found = "1";
+	int not_found_len = not_found.length();
+	int found_len = found.length();
+
+    cout << "Enter the name of the board to append a file to: ";
+    cin >> board_name;
+    if (send(s,board_name.c_str(),strlen(board_name.c_str()),0) == -1) error("Client error in sending board name\n");
+
+    cout << "Enter the name of the file to append to the board: ";
+    cin >> new_file;
+    if (send(s,new_file.c_str(),strlen(new_file.c_str()),0) == -1) error("Client error in sending message\n");
+
+    // receive the confirmation if append is possible
+    if((buf_len = recv(s, buf, sizeof(buf), 0)) < 0) error("Server error in receving message ID\n"); 
+    string result = string(buf, buf_len);
+    memset(buf, '\0', sizeof(buf));
+    if (result == "failed") {
+        cout << "Failed: " << board_name << " does not exist on server" << endl;
+        return;
+    } else if (result == "fileexists") {
+        cout << "Failed: the file trying to be appended already exists" << endl;
+        return;
+	}
+
+	if (stat(new_file.c_str(), &st) != 0) {
+		// FILE DOES NOT EXIST
+		if (send(s, not_found.c_str(), not_found.length(),0) == -1) error("Client error in sending confirmation.\n");
+		cout << "File does not exist!" << endl;
+		return;
+	} else {
+		newFile_size = st.st_size;	// get size of file
+		string filesize = to_string(newFile_size);
+		if (send(s,filesize.c_str(),filesize.length(),0) == -1) error("Client error sending file contents.\n");
+	}
+
+	fp = fopen(new_file.c_str(), "r");
+	size_t nbytes = 0;
+	while ((nbytes = fread(buf, sizeof(char), MAX_LINE, fp)) > 0) {
+		if (send(s,buf,sizeof(buf),0) == -1) error("Client error sending file contents.\n");
+	}
+	memset(buf, '\0', MAX_LINE);
+
+	if((buf_len = recv(s, buf, sizeof(buf), 0)) < 0) error("Server error in receving message ID\n"); 
+    result = string(buf, buf_len);
+	if (result == "success") {
+		cout << "Sucessfuly appended the file \"" << new_file << "\" to the board named: " << board_name << endl;
+	}
+	return;
+}
+
+
 /*Sends file in chunks to client
 >>>>>>> 4d92714ab7f0b3c0d975fdee07f06c1642e2a7b7
 void dwn_operation(int s){
