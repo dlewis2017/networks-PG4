@@ -20,6 +20,7 @@
 #include <fstream> 
 #include <map>
 #include <vector>
+#include <sstream>
 #define MAX_LINE 4096
 #define TEST_PORT 41004
 
@@ -31,6 +32,8 @@ using std::map;
 using std::fstream;
 using std::hash;
 using std::to_string;
+using std::vector;
+using std::stringstream;
 
 //unordered_set<string> fileNames;    // list of filenames which are the message boards
 map<string,string> user_table;
@@ -43,7 +46,10 @@ void print_usage(); //prints usage to stdout if program invoked incorrectly
 int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in udp_sin);
 void createBoard(int new_s, struct sockaddr_in udp_cin);
 void create_message(int s, struct sockaddr_in sin);
+void edt_operation(int s, struct sockaddr_in sin);
 void dst_operation(int s, struct sockaddr_in sin);
+void lis_operation(int s, struct sockaddr_in sin);
+void dlt_operation(int s, struct sockaddr_in sin);
 
 void error(string msg) {
   perror(msg.c_str());
@@ -181,22 +187,20 @@ void print_usage() {
 int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in sin) {
     if (strncmp(buf, "CRT", 3) == 0) {
         createBoard(udp_s, sin); 
-        return 1;
     } else if (strncmp(buf, "LIS", 3) == 0) {
-        return 1;
+        lis_operation(udp_s, sin);
     } else if (strncmp(buf, "MSG", 3) == 0) {
         create_message(udp_s, sin);
-        return 1;
     } else if (strncmp(buf, "DLT", 3) == 0) {
-        return 1;
+        dlt_operation(udp_s, sin);
     } else if (strncmp(buf, "RDB", 3) == 0) {
-        return 1;
+
     } else if (strncmp(buf, "EDT", 3) == 0) {
-        return 1;
+        edt_operation(udp_s, sin);
     } else if (strncmp(buf, "APN", 3) == 0) {
-        return 1;
+
     } else if (strncmp(buf, "DWN", 3) == 0) {
-        return 1;
+
     } else if (strncmp(buf, "DST", 3) == 0) {
         dst_operation(udp_s,sin);
         return 1;
@@ -205,6 +209,8 @@ int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in 
     } else if (strncmp(buf, "SHT", 3) == 0) {
         return -1;
     } 
+
+    return 1;
 
 }
 
@@ -244,12 +250,12 @@ void create_message(int s, struct sockaddr_in sin) {
     char buf[MAX_LINE], ret_buf[MAX_LINE];
     int recvlen;
 
-    if((recvlen = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, &len)) < 0) error("Sever error in receving board name\n"); 
+    if((recvlen = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, &len)) < 0) error("Server error in receving board name\n"); 
     string board_name = string(buf, recvlen);
 //    board_name += ".txt";
     memset(buf, '\0', sizeof(buf));
 
-    if((recvlen = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, &len)) < 0) error("Sever error in receving message\n"); 
+    if((recvlen = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, &len)) < 0) error("Server error in receving message\n"); 
     string message = string(buf, recvlen);
     memset(buf, '\0', sizeof(buf));
     if (active_boards.count(board_name) == 0) {
@@ -261,8 +267,10 @@ void create_message(int s, struct sockaddr_in sin) {
     }
     /* compute hash, write message to board, return response with hash string */
     size_t hash = hash_fn(message);
-    string hash_str = to_string(static_cast<long long>(hash));
-    string message_for_board = currentUser + "|" + hash_str + "|" + message + "\n";
+    stringstream ss;
+    ss << hash;
+    string hash_str = ss.str();
+    string message_for_board = hash_str + "|" + currentUser + "|" + message + "\n";
 
     fstream outputFile;
     outputFile.open(board_name.c_str(), fstream::in | fstream::out | fstream::app);
@@ -272,6 +280,146 @@ void create_message(int s, struct sockaddr_in sin) {
     int hash_str_len = hash_str.length();
     sprintf(ret_buf, hash_str.c_str());
     if((sendto(s, ret_buf, hash_str_len, 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending hash\n");
+}
+
+/* delete a message given message ID and board */
+void dlt_operation(int s, struct sockaddr_in sin) {
+    vector<string> content_to_copy;
+    hash<string> hash_fn;//hash function for string ids
+    socklen_t len = sizeof(sin);
+    char buf[MAX_LINE], ret_buf[MAX_LINE];
+    int recvlen;
+
+    if((recvlen = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, &len)) < 0) error("Server error in receving board name\n"); 
+    string board_name = string(buf, recvlen);
+    memset(buf, '\0', sizeof(buf));
+
+    if((recvlen = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, &len)) < 0) error("Server error in receving message ID\n"); 
+    string message_id = string(buf, recvlen);
+    memset(buf, '\0', sizeof(buf));
+    if (active_boards.count(board_name) == 0) {
+        string fail_msg = "failed";
+        int fail_msg_len = fail_msg.length();
+        if((sendto(s, fail_msg.c_str(), fail_msg_len, 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending failure status\n");
+        return;
+    }
+    /* find message ID in board, delete line */
+    string delimiter = "|";
+    size_t pos = 0;
+    string token;
+    fstream in_file;
+    in_file.open(board_name, fstream::in);
+    for (string line; getline(in_file, line);) {
+        pos = 0;
+        if ((pos = line.find(delimiter)) != string::npos) {
+            token = line.substr(0, pos);
+            if (token != message_id) {
+                content_to_copy.push_back(line);
+            }
+        }
+        else {
+            content_to_copy.push_back(line);
+        }
+    }
+    in_file.close();
+    /* delete file, copy contents into new file with same name */
+    remove(board_name.c_str());
+    fstream outputFile;
+    outputFile.open(board_name.c_str(), fstream::in | fstream::out | fstream::app);
+    for (int i=0; i < content_to_copy.size(); i++) {
+        outputFile << content_to_copy[i];
+        outputFile << "\n";
+    }
+    outputFile.close();
+    string success_msg = "success";
+    int success_msg_len = success_msg.length();
+    if((sendto(s, success_msg.c_str(), success_msg_len, 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending failure status\n");
+}
+
+/* edit a message given message ID and board */
+void edt_operation(int s, struct sockaddr_in sin) {
+    vector<string> content_to_copy;
+    hash<string> hash_fn;//hash function for string ids
+    socklen_t len = sizeof(sin);
+    char buf[MAX_LINE], ret_buf[MAX_LINE];
+    int recvlen;
+
+    // receive the name of the board
+    if((recvlen = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, &len)) < 0) error("Server error in receving board name\n"); 
+    string board_name = string(buf, recvlen);
+    memset(buf, '\0', sizeof(buf));
+
+    // receive the message ID
+    if((recvlen = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, &len)) < 0) error("Server error in receving message ID\n"); 
+    string message_id = string(buf, recvlen);
+    memset(buf, '\0', sizeof(buf));
+
+    // receive the new message
+    if((recvlen = recvfrom(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, &len)) < 0) error("Server error in receving message ID\n"); 
+    string new_message = string(buf, recvlen);
+    memset(buf, '\0', sizeof(buf));
+
+    if (active_boards.count(board_name) == 0) {
+        string fail_msg = "failed";
+        int fail_msg_len = fail_msg.length();
+        if((sendto(s, fail_msg.c_str(), fail_msg_len, 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending failure status\n");
+        return;
+    }
+
+    /* compute hash and message to write to board */
+    size_t hash = hash_fn(new_message);
+    stringstream ss;
+    ss << hash;
+    string hash_str = ss.str();
+    string message_for_board = hash_str + "|" + currentUser + "|" + new_message + "\n";
+
+    /* find message ID in board, delete line */
+    string delimiter = "|";
+    size_t pos = 0;
+    string token, originalUser;
+    fstream in_file;
+    in_file.open(board_name, fstream::in);
+    for (string line; getline(in_file, line);) {
+        pos = 0;
+        if ((pos = line.find(delimiter)) != string::npos) {
+            token = line.substr(0, pos);
+            if (token != message_id) {
+                content_to_copy.push_back(line);
+            } else {
+                content_to_copy.push_back(message_for_board);
+            }
+        }
+        else {
+            content_to_copy.push_back(line);
+        }
+    }
+    in_file.close();
+    /* delete file, copy contents into new file with same name */
+    remove(board_name.c_str());
+    fstream outputFile;
+    outputFile.open(board_name.c_str(), fstream::in | fstream::out | fstream::app);
+    for (int i=0; i < content_to_copy.size(); i++) {
+        outputFile << content_to_copy[i];
+        outputFile << "\n";
+    }
+    outputFile.close();
+    string success_msg = "success";
+    int success_msg_len = success_msg.length();
+    if((sendto(s, success_msg.c_str(), success_msg_len, 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending failure status\n");
+}
+
+/* list the names of the message boards */
+void lis_operation(int s, struct sockaddr_in sin) {
+    socklen_t len = sizeof(sin);
+    string boardNames = "";
+
+    for (auto it = active_boards.begin(); it != active_boards.end(); it++) {
+        boardNames += it->first + '\n';
+    }
+
+    int boardNames_len = boardNames.length();
+    if((sendto(s, boardNames.c_str(), boardNames_len, 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending boardNames\n");
+
 }
 
 /*receive board name and destroy(delete) it from all of the boards*/
