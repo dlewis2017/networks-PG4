@@ -415,6 +415,7 @@ void lis_operation(int s, struct sockaddr_in sin) {
     for (auto it = active_boards.begin(); it != active_boards.end(); it++) {
         boardNames += it->first + '\n';
     }
+    cout << boardNames;
 
     int boardNames_len = boardNames.length();
     if((sendto(s, boardNames.c_str(), boardNames_len, 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending boardNames\n");
