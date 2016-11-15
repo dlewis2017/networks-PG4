@@ -164,7 +164,7 @@ int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int ud
     if (strncmp(buf, "CRT", 3) == 0) {
         crt_operation(udp_s,sin);
     } else if (strncmp(buf, "LIS", 3) == 0) {
-       lis_operation(udp_s, sin);
+        lis_operation(udp_s, sin);
     } else if (strncmp(buf, "MSG", 3) == 0) {
         msg_operation(udp_s, sin);
     } else if (strncmp(buf, "DLT", 3) == 0) {
@@ -253,6 +253,7 @@ void msg_operation(int s, struct sockaddr_in sin) {
     cout << "Success: your message (identification number: " << result << ") has been posted to " << board_name << endl;
 }
 
+/* list all of the boards */
 void lis_operation(int s, struct sockaddr_in sin) {
 	int recv_len;
     socklen_t addr_len = sizeof(sin); 
