@@ -26,6 +26,8 @@ void crt_operation(int s, struct sockaddr_in sin);
 void msg_operation(int s, struct sockaddr_in sin);
 void dst_operation(int s, struct sockaddr_in sin);
 void dlt_operation(int s, struct sockaddr_in sin);
+void lis_operation(int s, struct sockaddr_in sin);
+void edt_operation(int s, struct sockaddr_in sin);
 void dwn_operation(int s);
 
 int sht_operation(int s);
@@ -83,10 +85,10 @@ int main(int argc, char* argv[])
     cout << "Connected to server" << endl;
     if(!pre_reqs(sin,udp_s,tcp_s)) error("Problem with username and password. Goodbye");
 
-    cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
+
     //main loop: get and send lines of text
     while(fgets(buf, sizeof(buf),stdin)){
-        //TODO: Becuase while loop "please enter operation" prompt always prints after each command or at beginning
+        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
         //send command to server
         buf[MAX_LINE-1]='\0';
         ibytes = strlen(buf) + 1;
@@ -162,12 +164,14 @@ int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int ud
     if (strncmp(buf, "CRT", 3) == 0) {
         crt_operation(udp_s,sin);
     } else if (strncmp(buf, "LIS", 3) == 0) {
+        lis_operation(udp_s, sin);
     } else if (strncmp(buf, "MSG", 3) == 0) {
         msg_operation(udp_s, sin);
     } else if (strncmp(buf, "DLT", 3) == 0) {
         dlt_operation(udp_s, sin);
     } else if (strncmp(buf, "RDB", 3) == 0) {
     } else if (strncmp(buf, "EDT", 3) == 0) {
+        edt_operation(udp_s, sin);
     } else if (strncmp(buf, "APN", 3) == 0) {
     } else if (strncmp(buf, "DWN", 3) == 0) {
         dwn_operation(tcp_s);
@@ -179,11 +183,9 @@ int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int ud
         return sht_operation(tcp_s);
     }else{
         cout << "Wrong command" << endl;
-        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
         return 1;
     }
 
-    cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
     return 1;    
 
 }
@@ -263,6 +265,31 @@ void dlt_operation(int s, struct sockaddr_in sin) {
     cout << "Enter the message ID to delete: ";
     cin >> message_id;
     if (sendto(s,message_id.c_str(),strlen(message_id.c_str()),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending message\n");
+    if ((buf_len = recvfrom(s,buf,sizeof(buf),0, (struct sockaddr *)&sin,&addr_len)) < 0) error("Client error in receiving message acknowledgement\n");
+    string result = string(buf, buf_len);
+    memset(buf, '\0', sizeof(buf));
+    if (result == "failed") {
+        cout << "Failed: " << board_name << " does not exist on server" << endl;
+        return;
+    }
+    cout << "Success: your message (identification number: " << message_id << ") has been deleted from " << board_name << endl;
+}
+
+/* on edt, edit message in a given board */
+void edt_operation(int s, struct sockaddr_in sin) {
+    string board_name, message_id, new_message;
+    socklen_t addr_len = sizeof(sin);     
+    char buf[MAX_LINE];
+    int buf_len;
+    cout << "Enter the name of the board to edit a message from: ";
+    cin >> board_name;
+    if (sendto(s,board_name.c_str(),strlen(board_name.c_str()),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending board name\n");
+    cout << "Enter the message ID to be edited: ";
+    cin >> message_id;
+    if (sendto(s,message_id.c_str(),strlen(message_id.c_str()),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending message\n");
+    cout << "Enter the new replacement message: ";
+    cin >> new_message;
+    if (sendto(s,new_message.c_str(),strlen(new_message.c_str()),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending message\n");
     if ((buf_len = recvfrom(s,buf,sizeof(buf),0, (struct sockaddr *)&sin,&addr_len)) < 0) error("Client error in receiving message acknowledgement\n");
     string result = string(buf, buf_len);
     memset(buf, '\0', sizeof(buf));
