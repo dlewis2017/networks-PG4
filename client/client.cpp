@@ -95,9 +95,9 @@ int main(int argc, char* argv[])
         if(send(tcp_s,buf,ibytes,0) == -1) error("client operation send error!");
         //handle operations
         if( handle_request(buf, sin, tcp_s, udp_s) < 1) break;
-        bzero((char*)&buf, sizeof(buf));
-        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT): ";
         while ( (c = getchar()) != '\n' && c != EOF );
+        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT): ";
+        bzero((char*)&buf, sizeof(buf));
     }
     close(udp_s);
     close(tcp_s);
@@ -183,7 +183,7 @@ int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int ud
     } else if (strncmp(buf, "SHT", 3) == 0) {
         return sht_operation(tcp_s);
     }else{
-        cout << "Wrong command" << endl;
+        cout << "Invalid command, press ENTER to continue" << endl;
         return 1;
     }
 
