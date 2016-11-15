@@ -26,6 +26,7 @@ void crt_operation(int s, struct sockaddr_in sin);
 void msg_operation(int s, struct sockaddr_in sin);
 void dst_operation(int s, struct sockaddr_in sin);
 void dlt_operation(int s, struct sockaddr_in sin);
+void dwn_operation(int s);
 
 int sht_operation(int s);
 void error(string msg){
@@ -160,35 +161,18 @@ int pre_reqs(struct sockaddr_in sin, int udp_s, int tcp_s){
 int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int udp_s) {
     if (strncmp(buf, "CRT", 3) == 0) {
         crt_operation(udp_s,sin);
-        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
-        return 1;
     } else if (strncmp(buf, "LIS", 3) == 0) {
-        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
-        return 1;
     } else if (strncmp(buf, "MSG", 3) == 0) {
         msg_operation(udp_s, sin);
-        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
-        return 1;
     } else if (strncmp(buf, "DLT", 3) == 0) {
         dlt_operation(udp_s, sin);
-        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
-        return 1;
     } else if (strncmp(buf, "RDB", 3) == 0) {
-        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
-        return 1;
     } else if (strncmp(buf, "EDT", 3) == 0) {
-        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
-        return 1;
     } else if (strncmp(buf, "APN", 3) == 0) {
-        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
-        return 1;
     } else if (strncmp(buf, "DWN", 3) == 0) {
-        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
-        return 1;
+        dwn_operation(tcp_s);
     } else if (strncmp(buf, "DST", 3) == 0) {
         dst_operation(udp_s,sin);
-        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
-        return 1;
     } else if (strncmp(buf, "XIT", 3) == 0) {
         return 0;
     } else if (strncmp(buf, "SHT", 3) == 0) {
@@ -198,6 +182,9 @@ int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int ud
         cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
         return 1;
     }
+
+    cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
+    return 1;    
 
 }
 
@@ -303,4 +290,17 @@ void dst_operation(int s, struct sockaddr_in sin){
     cout << "Message from server upon request to destroy board " << board_name << ": " << response << endl;
 }
 
+/*Sends file in chunks to client*/
+void dwn_operation(int s){
+    string board_name;
+    char buf[MAX_LINE];
+    int buf_len;
 
+    //ask for board to download
+    cout << "Which board would you like to download?" << endl;
+    cin >> board_name;
+    if(send(s,board_name.c_str(),sizeof(board_name.c_str(),0)) == -1) error("Client error in sending board to download");
+
+
+
+}
