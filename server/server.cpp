@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
 
     printf("Welcome to TCP Server. \n");
 
-    //udp_cinLength = sizeof(sin);
+    len = sizeof(sin);
 
     while (server_running) {
         if(new_client){
