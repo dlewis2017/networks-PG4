@@ -26,7 +26,7 @@ void crt_operation(int s, struct sockaddr_in sin);
 void msg_operation(int s, struct sockaddr_in sin);
 void dst_operation(int s, struct sockaddr_in sin);
 void dlt_operation(int s, struct sockaddr_in sin);
-//void lis_operation(int s, struct sockaddr_in sin);
+void lis_operation(int s, struct sockaddr_in sin);
 void edt_operation(int s, struct sockaddr_in sin);
 //void dwn_operation(int s);
 
@@ -166,7 +166,7 @@ int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int ud
     if (strncmp(buf, "CRT", 3) == 0) {
         crt_operation(udp_s,sin);
     } else if (strncmp(buf, "LIS", 3) == 0) {
-        //lis_operation(udp_s, sin);
+        lis_operation(udp_s, sin);
     } else if (strncmp(buf, "MSG", 3) == 0) {
         msg_operation(udp_s, sin);
     } else if (strncmp(buf, "DLT", 3) == 0) {
@@ -260,10 +260,13 @@ void lis_operation(int s, struct sockaddr_in sin) {
     socklen_t addr_len = sizeof(sin); 
 	char buf[MAX_LINE];
 
+	cout << "IN lis" << endl;
+
 	if (recv_len = recvfrom(s,buf,sizeof(buf),0, (struct sockaddr *)&sin,&addr_len) < 0) error("Client error in receiving board listing\n");
 	string boardListing = string(buf);
 
 	cout << boardListing;
+	cout << "finished lis" << endl;
 }
 
 /* on DLT, delete message and send response */
@@ -284,7 +287,10 @@ void dlt_operation(int s, struct sockaddr_in sin) {
     if (result == "failed") {
         cout << "Failed: " << board_name << " does not exist on server" << endl;
         return;
-    }
+    } else if (result == "wronguser") {
+        cout << "Failed: you are not the user who created the original message" << endl;
+        return;
+	}
     cout << "Success: your message (identification number: " << message_id << ") has been deleted from " << board_name << endl;
 }
 
@@ -294,23 +300,30 @@ void edt_operation(int s, struct sockaddr_in sin) {
     socklen_t addr_len = sizeof(sin);     
     char buf[MAX_LINE];
     int buf_len;
+
     cout << "Enter the name of the board to edit a message from: ";
     cin >> board_name;
     if (sendto(s,board_name.c_str(),strlen(board_name.c_str()),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending board name\n");
+
     cout << "Enter the message ID to be edited: ";
     cin >> message_id;
     if (sendto(s,message_id.c_str(),strlen(message_id.c_str()),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending message\n");
+
     cout << "Enter the new replacement message: ";
     cin >> new_message;
     if (sendto(s,new_message.c_str(),strlen(new_message.c_str()),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending message\n");
+
     if ((buf_len = recvfrom(s,buf,sizeof(buf),0, (struct sockaddr *)&sin,&addr_len)) < 0) error("Client error in receiving message acknowledgement\n");
     string result = string(buf, buf_len);
     memset(buf, '\0', sizeof(buf));
     if (result == "failed") {
         cout << "Failed: " << board_name << " does not exist on server" << endl;
         return;
-    }
-    cout << "Success: your message (identification number: " << message_id << ") has been deleted from " << board_name << endl;
+    } else if (result == "wronguser") {
+        cout << "Failed: you are not the user who created the original message" << endl;
+        return;
+	}
+    cout << "Success: your message (identification number: " << message_id << ") has been edited on " << board_name << endl;
 }
 
 /*Destroy a board (file)*/

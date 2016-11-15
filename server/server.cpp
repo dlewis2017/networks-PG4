@@ -305,15 +305,26 @@ void dlt_operation(int s, struct sockaddr_in sin) {
     /* find message ID in board, delete line */
     string delimiter = "|";
     size_t pos = 0;
-    string token;
+    string token, token2, originalUser;
     fstream in_file;
     in_file.open(board_name, fstream::in);
     for (string line; getline(in_file, line);) {
         pos = 0;
         if ((pos = line.find(delimiter)) != string::npos) {
             token = line.substr(0, pos);
+			token2 = line;
+			token2.erase(0, pos + delimiter.length());
+			originalUser = token2.substr(0, token2.find(delimiter));
             if (token != message_id) {
                 content_to_copy.push_back(line);
+            } else {
+				if (originalUser != currentUser) {
+					cout << "Different user than the original user who created the post. Try again." << endl;
+        			string fail_msg = "wronguser";
+        			int fail_msg_len = fail_msg.length();
+    				if((sendto(s, fail_msg.c_str(), fail_msg_len, 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending failure status\n");
+					return;
+				}
             }
         }
         else {
@@ -321,6 +332,7 @@ void dlt_operation(int s, struct sockaddr_in sin) {
         }
     }
     in_file.close();
+
     /* delete file, copy contents into new file with same name */
     remove(board_name.c_str());
     fstream outputFile;
@@ -375,17 +387,28 @@ void edt_operation(int s, struct sockaddr_in sin) {
     /* find message ID in board, delete line */
     string delimiter = "|";
     size_t pos = 0;
-    string token, originalUser;
+    string token, token2, originalUser;
     fstream in_file;
     in_file.open(board_name, fstream::in);
     for (string line; getline(in_file, line);) {
         pos = 0;
         if ((pos = line.find(delimiter)) != string::npos) {
             token = line.substr(0, pos);
+			token2 = line;
+			token2.erase(0, pos + delimiter.length());
+			originalUser = token2.substr(0, token2.find(delimiter));
             if (token != message_id) {
                 content_to_copy.push_back(line);
             } else {
-                content_to_copy.push_back(message_for_board);
+				if (originalUser == currentUser) {
+                	content_to_copy.push_back(message_for_board);
+				} else {
+					cout << "Different user than the original user who created the post. Try again." << endl;
+        			string fail_msg = "wronguser";
+        			int fail_msg_len = fail_msg.length();
+    				if((sendto(s, fail_msg.c_str(), fail_msg_len, 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending failure status\n");
+					return;
+				}
             }
         }
         else {
@@ -419,6 +442,8 @@ void lis_operation(int s, struct sockaddr_in sin) {
 
     int boardNames_len = boardNames.length();
     if((sendto(s, boardNames.c_str(), boardNames_len, 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending boardNames\n");
+
+	cout << "send boardnames" << endl;
 
 }
 
