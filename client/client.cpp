@@ -28,7 +28,7 @@ void dst_operation(int s, struct sockaddr_in sin);
 void dlt_operation(int s, struct sockaddr_in sin);
 void lis_operation(int s, struct sockaddr_in sin);
 void edt_operation(int s, struct sockaddr_in sin);
-void dwn_operation(int s);
+//void dwn_operation(int s);
 
 int sht_operation(int s);
 void error(string msg){
@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
     while(fgets(buf, sizeof(buf),stdin)){
         cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
         //send command to server
-        buf[MAX_LINE-1]='\0';
+        //buf[MAX_LINE-1]='\0';
         ibytes = strlen(buf) + 1;
         if(send(tcp_s,buf,ibytes,0) == -1) error("client operation send error!");
         //handle operations
@@ -164,7 +164,7 @@ int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int ud
     if (strncmp(buf, "CRT", 3) == 0) {
         crt_operation(udp_s,sin);
     } else if (strncmp(buf, "LIS", 3) == 0) {
-        lis_operation(udp_s, sin);
+       lis_operation(udp_s, sin);
     } else if (strncmp(buf, "MSG", 3) == 0) {
         msg_operation(udp_s, sin);
     } else if (strncmp(buf, "DLT", 3) == 0) {
@@ -174,7 +174,7 @@ int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int ud
         edt_operation(udp_s, sin);
     } else if (strncmp(buf, "APN", 3) == 0) {
     } else if (strncmp(buf, "DWN", 3) == 0) {
-        dwn_operation(tcp_s);
+        // dwn_operation(tcp_s);
     } else if (strncmp(buf, "DST", 3) == 0) {
         dst_operation(udp_s,sin);
     } else if (strncmp(buf, "XIT", 3) == 0) {
@@ -253,6 +253,17 @@ void msg_operation(int s, struct sockaddr_in sin) {
     cout << "Success: your message (identification number: " << result << ") has been posted to " << board_name << endl;
 }
 
+void lis_operation(int s, struct sockaddr_in sin) {
+	int recv_len;
+    socklen_t addr_len = sizeof(sin); 
+	char buf[MAX_LINE];
+
+	if (recv_len = recvfrom(s,buf,sizeof(buf),0, (struct sockaddr *)&sin,&addr_len) < 0) error("Client error in receiving board listing\n");
+	string boardListing = string(buf);
+
+	cout << boardListing;
+}
+
 /* on DLT, delete message and send response */
 void dlt_operation(int s, struct sockaddr_in sin) {
     string board_name, message_id;
@@ -317,7 +328,8 @@ void dst_operation(int s, struct sockaddr_in sin){
     cout << "Message from server upon request to destroy board " << board_name << ": " << response << endl;
 }
 
-/*Sends file in chunks to client*/
+/*
+/*Sends file in chunks to client
 void dwn_operation(int s){
     string board_name;
     char buf[MAX_LINE];
@@ -331,3 +343,4 @@ void dwn_operation(int s){
 
 
 }
+*/
