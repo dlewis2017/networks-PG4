@@ -47,6 +47,7 @@ void createBoard(int new_s, struct sockaddr_in udp_cin);
 void create_message(int s, struct sockaddr_in sin);
 void dst_operation(int s, struct sockaddr_in sin);
 void dlt_operation(int s, struct sockaddr_in sin);
+void dwn_operation(int s);
 
 void error(string msg) {
   perror(msg.c_str());
@@ -193,6 +194,7 @@ int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in 
     } else if (strncmp(buf, "EDT", 3) == 0) {
     } else if (strncmp(buf, "APN", 3) == 0) {
     } else if (strncmp(buf, "DWN", 3) == 0) {
+        dwn_operation(tcp_s);
     } else if (strncmp(buf, "DST", 3) == 0) {
         dst_operation(udp_s,sin);
     } else if (strncmp(buf, "XIT", 3) == 0) {
@@ -320,22 +322,18 @@ void dst_operation(int s, struct sockaddr_in sin){
             sprintf(buf,"Nacho board\n");
         }
     }
-/*
-    ifstream infile(board_name);
-    if (infile.good()){
-        getline(infile, creator);
-        cout << "creator is " << creator << endl;
-    }else sprintf(buf,"Table does not exist");
-    infile.close();
-    if (currentUser == creator){
-        //delete from hash table and from directory
-        active_boards.erase(board_name);
-        
-    } else sprintf(buf,"Nacho table");
-*/
     if((sendto(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending response to dst table\n");
 
     cout << "Waiting for command" << endl;    
 
 }
+/*send file given in chunks back to user*/
+void dwn_operation(int s){
+    string board_name;
+    char buf[MAX_LINE];
+    int buf_len;
 
+    //receive name of board to download and check if exists
+    if((recv(s,buf,sizeof(buf),0)) == -1) error("Server error in receiving reponse for dwn operation\n");
+
+}
