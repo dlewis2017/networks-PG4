@@ -566,22 +566,45 @@ void dst_operation(int s, struct sockaddr_in sin){
 }
 /*send file given in chunks back to user*/
 void dwn_operation(int s){
-    string board_name, file_name, file_size, line, full_file_name;
+    string board_name, file_name, full_file_name, file_size_str;
     char byte, buf[MAX_LINE];
     const char *app_file_name_c;
-    int i,buf_len, file_size_int, total_bytes;
+    int i,buf_len, total_bytes;
+    struct stat st;
+    int32_t file_size;
+    FILE *fp;
 
     //receive name of board and file to download; convert file name to char * and take into account \n
     if((buf_len = recv(s,buf,sizeof(buf),0)) == -1) error("Server error in receiving reponse for dwn operation board\n");
     board_name = string(buf,buf_len);
-    memset(buf, '\0', sizeof(buf));
+    memset(buf, '\0', MAX_LINE);
     if((buf_len = recv(s,buf,sizeof(buf),0)) == -1) error("Server error in receiving reponse for dwn operation file\n");
     file_name = string(buf,buf_len);
     full_file_name = board_name+"-"+file_name;
-    memset(buf, '\0', sizeof(buf));
+    memset(buf, '\0', MAX_LINE);
+    //check if file exists
+    if (stat(full_file_name.c_str(), &st) != 0) {
+        file_size_str = "-1";
+        if(send(s,file_size_str.c_str(),file_size_str.length(),0) == -1) error("server error in sending negative 1\n");
+        return;
+    }
+    file_size = st.st_size;
+    file_size_str = to_string(static_cast<long long>(file_size));
+    if(send(s,file_size_str.c_str(),file_size_str.length(),0) == -1) error("server error in sending file size\n");
+
+    /* send contents to server */
+    fp = fopen(full_file_name.c_str(), "r");
+    size_t n_bytes = 0;
+    memset(buf, '\0', MAX_LINE);
+    while ((n_bytes = fread(buf, sizeof(char), MAX_LINE, fp)) > 0){
+        if (send(s,buf,sizeof(buf),0) == -1) error("server error in sending contents in chunks\n");
+        memset(buf, '\0', MAX_LINE);
+    }
     //check if board exists
+    /*
     fstream file(full_file_name, std::ios::binary);  
     if(!file){
+        cout << "file was not found" << endl;
         file_size = "-1";
         if(send(s,file_size.c_str(),sizeof(file_size.c_str()),0) == -1) error("server error in sending negative 1 file size");
         return;
@@ -614,7 +637,7 @@ void dwn_operation(int s){
         i += 1;
         total_bytes += 1;
 
-    }
+    }*/
 
 }
 
