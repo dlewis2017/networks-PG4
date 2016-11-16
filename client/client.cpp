@@ -3,7 +3,6 @@
   client.c
   Client for connecting with username and password and running commands
 */
-//TODO:SHT should delete everything
 #include <sys/time.h>
 #include <fstream>
 #include <sys/stat.h>

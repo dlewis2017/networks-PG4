@@ -171,7 +171,14 @@ int main(int argc, char *argv[]) {
                     memset(buf,'\0',sizeof(buf));
                     sprintf(buf,"correct");
                     if( send(tcp_comm_s, buf, strlen(buf),0) < 0) error("Server error in sending confirmation\n");
-                    //delete_everything();
+                    //delete everything in hash table and directory
+                    typedef map<string,string>::iterator it_type;
+                    for(it_type iterator = active_boards.begin(); iterator != active_boards.end(); iterator++) {
+                        string boards = iterator->first;
+                        string command = "exec rm -r ./"+boards+"*";
+                        system(command.c_str());
+                    }
+                    
                     close(tcp_s);
                     close(udp_s);
                     exit(0); 
