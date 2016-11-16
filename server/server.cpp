@@ -39,14 +39,11 @@ using std::stringstream;
 using std::getline;
 using std::ofstream;
 
-//unordered_set<string> fileNames;    // list of filenames which are the message boards
 map<string,string> user_table;
 map<string,string> active_boards;
 vector<string> appendedFiles;
 string currentUser;
 
-
-//void createBoard(int new_s);
 void print_usage(); //prints usage to stdout if program invoked incorrectly
 int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in udp_sin);
 void createBoard(int new_s, struct sockaddr_in udp_cin);
@@ -253,7 +250,6 @@ void createBoard(int s, struct sockaddr_in sin) {
         sprintf(buf,"failure");
 
     }
-    cout << buf << endl;
     if((sendto(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending confirmation\n");
     memset(buf, '\0', sizeof(buf));
 
@@ -334,7 +330,6 @@ void dlt_operation(int s, struct sockaddr_in sin) {
                 content_to_copy.push_back(line);
             } else {
 				if (originalUser != currentUser) {
-					cout << "Different user than the original user who created the post. Try again." << endl;
         			string fail_msg = "wronguser";
         			int fail_msg_len = fail_msg.length();
     				if((sendto(s, fail_msg.c_str(), fail_msg_len, 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending failure status\n");
@@ -419,7 +414,6 @@ void edt_operation(int s, struct sockaddr_in sin) {
 				if (originalUser == currentUser) {
                 	content_to_copy.push_back(message_for_board);
 				} else {
-					cout << "Different user than the original user who created the post. Try again." << endl;
         			string fail_msg = "wronguser";
         			int fail_msg_len = fail_msg.length();
     				if((sendto(s, fail_msg.c_str(), fail_msg_len, 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending failure status\n");
@@ -490,7 +484,6 @@ void apn_operation(int s) {
     } else if (stat(new_file.c_str(), &st) == 0) {
 		// FILE ALREADY	EXISTS
 		if (send(s, found.c_str(), found.length(),0) == -1) error("Server error in sending failure status.\n");
-		cout << "File already exists!" << endl;
 		return;
 	} else { 
         if((send(s, success_msg.c_str(), success_msg_len, 0)) == -1) error("Server error in sending failure status\n");
@@ -500,7 +493,6 @@ void apn_operation(int s) {
     if((recvlen = recv(s, buf, sizeof(buf), 0)) < 0) error("Server error in receving message ID\n");
 	string result = string(buf,recvlen);
 	if (result == "-1") {
-		cout << "User could not find file. APN aborted." << endl;
 		return;
 	} else {
 		fileSize = atoi(buf); 
@@ -565,7 +557,6 @@ void dst_operation(int s, struct sockaddr_in sin){
     }
     if((sendto(s, buf, sizeof(buf), 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending response to dst table\n");
 
-    cout << "Waiting for command" << endl;    
 
 }
 /*send file given in chunks back to user*/

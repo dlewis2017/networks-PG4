@@ -258,6 +258,7 @@ void msg_operation(int s, struct sockaddr_in sin) {
         return;
     }
     cout << "Success: your message (identification number: " << result << ") has been posted to " << board_name << endl;
+    cout << "Press ENTER to continue" << endl;
 }
 
 /* list all of the boards */
@@ -329,6 +330,7 @@ void edt_operation(int s, struct sockaddr_in sin) {
         return;
 	}
     cout << "Success: your message (identification number: " << message_id << ") has been edited on " << board_name << endl;
+    cout << "Press ENTER to continue" << endl;
 }
 
 /*Destroy a board (file)*/
