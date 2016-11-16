@@ -594,45 +594,6 @@ void dwn_operation(int s){
         if (send(s,buf,sizeof(buf),0) == -1) error("server error in sending contents in chunks\n");
         memset(buf, '\0', MAX_LINE);
     }
-    //check if board exists
-    /*
-    fstream file(full_file_name, std::ios::binary);  
-    if(!file){
-        cout << "file was not found" << endl;
-        file_size = "-1";
-        if(send(s,file_size.c_str(),sizeof(file_size.c_str()),0) == -1) error("server error in sending negative 1 file size");
-        return;
-    }
-    //calculate file size
-    file.seekg(0,file.end);
-    file_size_int = file.tellg();
-    file_size = to_string(file_size_int);
-    file.seekg(0,file.beg);
-
-    //send file size
-    if(send(s,file_size.c_str(),sizeof(file_size.c_str()),0) == -1) error("server error in sending file size");
-
-    //send bytes i chunks
-    while(file.get(byte)){
-        //if i is MAX_LINE, send what you have, restart i and keep going
-        if(i == MAX_LINE){ 
-            if(send(s,buf,sizeof(buf),0) == -1) error("server error in sending chunks of data to download\n");
-            memset(buf,'\0',sizeof(buf));
-            i = 0;
-        }
-        //if total bytes copied so far is == total file size then we're done and send remaining
-        if(total_bytes == file_size_int){
-            if(send(s,buf,i,0) == -1) error("server error in sending final chunck of data to download\n");
-            memset(buf,'\0',sizeof(buf));
-            break;
-        }
-        //if i is not MAX_LINE yet, keep adding to buffer and increasing i and total_bytes
-        buf[i] = byte;
-        i += 1;
-        total_bytes += 1;
-
-    }*/
-
 }
 
 
