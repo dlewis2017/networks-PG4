@@ -1,6 +1,7 @@
 /* Jack Ryan - jryan13, David Lewis - dlewis12, Chris Beaufils - cbeaufil
  * CSE 30264
  * 11/14/2016
+ * server of PG4
  */
 
 #include <time.h>
