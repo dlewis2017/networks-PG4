@@ -55,6 +55,7 @@ void dst_operation(int s, struct sockaddr_in sin);
 void dlt_operation(int s, struct sockaddr_in sin);
 void apn_operation(int s);
 void dwn_operation(int s);
+void rdb_operation(int s);
 void lis_operation(int s, struct sockaddr_in sin);
 
 
@@ -209,6 +210,7 @@ int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in 
     } else if (strncmp(buf, "DLT", 3) == 0) {
         dlt_operation(udp_s, sin);
     } else if (strncmp(buf, "RDB", 3) == 0) {
+        rdb_operation(tcp_s);
     } else if (strncmp(buf, "EDT", 3) == 0) {
         edt_operation(udp_s,sin);
     } else if (strncmp(buf, "APN", 3) == 0) {
@@ -603,5 +605,35 @@ void dwn_operation(int s){
     }
 }
 
-
+void rdb_operation(int s) {
+    int len;
+    string boardname;
+    char buf[MAX_LINE];
+    if((len = recv(s, buf, MAX_LINE, 0)) < 0) error("ERROR in sendto\n");
+    boardname = string(buf, len);
+    memset(buf, '\0', sizeof(buf));
+    if (active_boards.find(boardname) == active_boards.end()) {
+        sprintf(buf, "-1");
+        if(send(s,buf,strlen(buf),0) == -1) error("server error in sending file size\n");
+        return;
+    }
+    struct stat st;
+    int32_t size;
+    stat(boardname.c_str(), &st);
+    size = st.st_size;
+    stringstream ss;
+    ss >> size;
+    string filesize = ss.str();
+    if(send(s,filesize.c_str(),filesize.length(),0) == -1) error("server error in sending file size\n");
+    FILE *fp;
+    fp = fopen(boardname.c_str(), "r");
+    size_t n_bytes = 0;
+    while ((n_bytes = fread(buf, sizeof(char), MAX_LINE, fp)) > 0){
+        if (send(s,buf,sizeof(buf),0) == -1){
+            perror("client send error!");
+            exit(1);
+        }
+        memset(buf, '\0', MAX_LINE);
+    } 
+}
 

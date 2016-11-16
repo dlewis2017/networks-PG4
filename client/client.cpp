@@ -26,8 +26,8 @@ void crt_operation(int s, struct sockaddr_in sin);
 void msg_operation(int s, struct sockaddr_in sin);
 void dlt_operation(int s, struct sockaddr_in sin);
 void edt_operation(int s, struct sockaddr_in sin);
-void lis_operation(int s, struct sockaddr_in sin);
-// void rdb_operation(int s, struct sockaddr_in sin);
+void lis_operation(int s);
+void rdb_operation(int s);
 void apn_operation(int s);
 void dwn_operation(int s);
 void dst_operation(int s, struct sockaddr_in sin);
@@ -168,12 +168,13 @@ int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int ud
     if (strncmp(buf, "CRT", 3) == 0) {
         crt_operation(udp_s,sin);
     } else if (strncmp(buf, "LIS", 3) == 0) {
-        lis_operation(tcp_s, sin);
+        lis_operation(tcp_s);
     } else if (strncmp(buf, "MSG", 3) == 0) {
         msg_operation(udp_s, sin);
     } else if (strncmp(buf, "DLT", 3) == 0) {
         dlt_operation(udp_s, sin);
     } else if (strncmp(buf, "RDB", 3) == 0) {
+        rdb_operation(tcp_s);
     } else if (strncmp(buf, "EDT", 3) == 0) {
         edt_operation(udp_s, sin);
     } else if (strncmp(buf, "APN", 3) == 0) {
@@ -259,9 +260,8 @@ void msg_operation(int s, struct sockaddr_in sin) {
 }
 
 /* list all of the boards */
-void lis_operation(int s, struct sockaddr_in sin) {
+void lis_operation(int s) {
 	int recv_len;
-    socklen_t addr_len = sizeof(sin); 
 	char buf[MAX_LINE];
 
 	memset(buf, '\0', sizeof(buf));
@@ -450,5 +450,34 @@ void dwn_operation(int s){
 
 }
 
-
+void rdb_operation(int s) {
+    char buf[MAX_LINE];
+    string board;
+    int bytes_received, filesize;
+    cout << "Enter the name of the board to read: ";
+    cin >> board;
+    if(send(s,board.c_str(),board.length(),0) == -1) error("Client error in sending board to download\n");
+    /* receive file size */
+    if((bytes_received = recv(s,buf,sizeof(buf),0)) == -1) error("Client error in receiving file size to download\n");
+    filesize = atoi(buf);
+    if (filesize < 0) {
+        cout << "File size was negative, error occured" << endl;
+        return;
+    }
+    cout << buf << endl;
+    memset(buf, '\0', sizeof(buf));
+    int read_so_far = 0;
+    while (read_so_far < filesize) {
+        if (filesize - read_so_far > MAX_LINE) {
+            if((bytes_received = recv(s,buf,MAX_LINE,0)) == -1) error("Client error in receiving file size to download\n");
+            cout << buf << endl;
+        }
+        else {
+            if ((bytes_received = recv(s, buf, filesize - read_so_far, 0)) == -1) error("Error receiving contents\n");
+            cout << buf << endl;
+        }
+        memset(buf, '\0', sizeof(buf));
+        read_so_far += bytes_received;
+    }
+}
 
