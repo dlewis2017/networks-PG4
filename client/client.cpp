@@ -169,7 +169,7 @@ int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int ud
     if (strncmp(buf, "CRT", 3) == 0) {
         crt_operation(udp_s,sin);
     } else if (strncmp(buf, "LIS", 3) == 0) {
-        lis_operation(udp_s, sin);
+        lis_operation(tcp_s, sin);
     } else if (strncmp(buf, "MSG", 3) == 0) {
         msg_operation(udp_s, sin);
     } else if (strncmp(buf, "DLT", 3) == 0) {
@@ -264,15 +264,12 @@ void lis_operation(int s, struct sockaddr_in sin) {
     socklen_t addr_len = sizeof(sin); 
 	char buf[MAX_LINE];
 
-	cout << "IN lis" << endl;
-
-
 	memset(buf, '\0', sizeof(buf));
-	if (recv_len = recvfrom(s,buf,sizeof(buf),0, (struct sockaddr *)&sin,&addr_len) < 0) error("Client error in receiving board listing\n");
-	string boardListing = string(buf);
+	recv_len = recv(s,buf,sizeof(buf),0);
+	string boardListing = string(buf, recv_len);
 
 	cout << boardListing;
-	cout << "finished lis" << endl;
+    cout << "Press ENTER to continue." << endl;
 }
 
 /* on DLT, delete message and send response */
@@ -387,7 +384,9 @@ void apn_operation(int s) {
 		return;
 	} else {
 		newFile_size = st.st_size;	// get size of file
-		string filesize = to_string(newFile_size);
+        stringstream ss;
+        ss << newFile_size;
+        string filesize = ss.str();
 		if (send(s,filesize.c_str(),filesize.length(),0) == -1) error("Client error sending file contents.\n");
 	}
 

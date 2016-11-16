@@ -196,7 +196,7 @@ int handle_request(char buf[MAX_LINE], int tcp_s, int udp_s, struct sockaddr_in 
     if (strncmp(buf, "CRT", 3) == 0) {
         createBoard(udp_s, sin); 
     } else if (strncmp(buf, "LIS", 3) == 0) {
-        lis_operation(udp_s, sin);
+        lis_operation(tcp_s, sin);
     } else if (strncmp(buf, "MSG", 3) == 0) {
         create_message(udp_s, sin);
     } else if (strncmp(buf, "DLT", 3) == 0) {
@@ -444,15 +444,9 @@ void lis_operation(int s, struct sockaddr_in sin) {
 
     for (auto it = active_boards.begin(); it != active_boards.end(); it++) {
         boardNames += it->first + '\n';
-		boardNames_len += it->first.length();
+		boardNames_len += it->first.length()+1;
     }
-
-	cout << "boardname: " << boardNames << "board length: " << boardNames_len << endl;
-
-    if((sendto(s, boardNames.c_str(), boardNames_len, 0, (struct sockaddr *)&sin, len)) == -1) error("Server error in sending boardNames\n");
-
-	cout << "send boardnames" << endl;
-
+    if((send(s, boardNames.c_str(), boardNames_len+1, 0)) == -1) error("Server error in sending boardNames\n");
 }
 
 void apn_operation(int s) {
