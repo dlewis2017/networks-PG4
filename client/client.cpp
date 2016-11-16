@@ -245,9 +245,10 @@ void msg_operation(int s, struct sockaddr_in sin) {
     int buf_len;
     cout << "Enter the name of the board to leave a message on: ";
     cin >> board_name;
+	cin.ignore();
     if (sendto(s,board_name.c_str(),strlen(board_name.c_str()),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending board name\n");
     cout << "Enter the message to send: ";
-    cin >> message;
+    std::getline(cin,message);
     if (sendto(s,message.c_str(),strlen(message.c_str()),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending message\n");
     if ((buf_len = recvfrom(s,buf,sizeof(buf),0, (struct sockaddr *)&sin,&addr_len)) < 0) error("Client error in receiving message acknowledgement\n");
     string result = string(buf, buf_len);
