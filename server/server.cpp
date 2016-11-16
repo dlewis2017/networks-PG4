@@ -510,7 +510,7 @@ void apn_operation(int s) {
         if (fileSize - readsoFar > MAX_LINE) {
             if ((recvlen=recv(s, buf, sizeof(buf), 0)) == -1) error("Server receiving error!\n");
         } else {
-            if ((recvlen=recv(s, buf, filesize - read_so_far, 0)) == -1) error("Server receiving error!\n");
+            if ((recvlen=recv(s, buf, fileSize - readsoFar, 0)) == -1) error("Server receiving error!\n");
         }
 		copy = string(buf, recvlen);
         outputFile << copy;
