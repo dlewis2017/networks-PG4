@@ -17,6 +17,7 @@
 #include <sys/socket.h>	
 #include <netinet/in.h>
 #include <netdb.h>		
+#include <sstream>
 #define	MAX_LINE 4096
 using namespace std;
 
@@ -292,15 +293,54 @@ void dst_operation(int s, struct sockaddr_in sin){
 
 /*Sends file in chunks to client*/
 void dwn_operation(int s){
-    string board_name;
+    string board_name, file_name, full_file_name, tmp;
     char buf[MAX_LINE];
-    int buf_len;
+    int buf_len, file_name_size, file_size, len;
+    size_t read_so_far = 0;
 
-    //ask for board to download
-    cout << "Which board would you like to download?" << endl;
+
+    //ask for board and file to download
+    cout << "Which board would you like to download from?" << endl;
     cin >> board_name;
-    if(send(s,board_name.c_str(),sizeof(board_name.c_str(),0)) == -1) error("Client error in sending board to download");
+    if(send(s,board_name.c_str(),sizeof(board_name.c_str()),0) == -1) error("Client error in sending board to download\n");
+    cout << "Which file will you be looking to download?" << endl;
+    cin >> file_name;
+    if(send(s,file_name.c_str(),sizeof(file_name.c_str()),0) == -1) error("Client error in sending board to download\n");
+ 
+    full_file_name = board_name+file_name;
+    //receive file size, if negative there was an error
+    if((file_name_size = recv(s,buf,sizeof(buf),0)) == -1) error("Client error in receiving file size to download\n");
+    file_size = atoi(buf);
+    if(file_size < 0){
+        cout << "File size was negative, error occured" <<endl;
+        return;
+    }
+    memset(buf, '\0', sizeof(buf));
 
+    ofstream outputFile;
+    outputFile.open(full_file_name,ios::app); 
+    //start receiving data in chunks
+    /*while(file_size > 0){
+        if((chunk_size = recv(s,buf,MAX_LINE,0)) == -1) error("Client error in receiving file chunks\n");
+        //store current chunk into file
+        ofstream outputFile();
+        outputFile.open(full_file_name);
+        outputFile << buf;
+        file_size - MAX_LINE; //file size - max line or when chunk size is less than MAX LINE
+    }*/
 
+    while (read_so_far < file_size) {
+        if (file_size - read_so_far > MAX_LINE) {
+            if ((len=recv(s, buf, sizeof(buf), 0)) == -1) error("Server receive error\n");
+        } else {
+            if ((len=recv(s, buf, file_size - read_so_far, 0)) == -1) error("Server receive error\n");
+        }
+        tmp = string(buf, len);
+        outputFile << tmp;
+        memset(buf, '\0', MAX_LINE);
+        read_so_far += len;
+    }
+    outputFile.close();
+    cout << endl;
 
 }
