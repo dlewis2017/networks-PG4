@@ -25,11 +25,15 @@ int pre_reqs(struct sockaddr_in sin, int udp_s, int tcp_s);
 int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int udp_s); 
 void crt_operation(int s, struct sockaddr_in sin);
 void msg_operation(int s, struct sockaddr_in sin);
-void dst_operation(int s, struct sockaddr_in sin);
 void dlt_operation(int s, struct sockaddr_in sin);
-void dwn_operation(int s);
-
+void edt_operation(int s, struct sockaddr_in sin);
+void lis_operation(int s, struct sockaddr_in sin);
+// void rdb_operation(int s, struct sockaddr_in sin);
+void apn_operation(int s);
+//void dwn_operation(int s);
+void dst_operation(int s, struct sockaddr_in sin);
 int sht_operation(int s);
+
 void error(string msg){
     perror(msg.c_str());
     exit(1);
@@ -83,17 +87,19 @@ int main(int argc, char* argv[])
 
     cout << "Connected to server" << endl;
     if(!pre_reqs(sin,udp_s,tcp_s)) error("Problem with username and password. Goodbye");
-
-    cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
+    int c;
+    cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT): ";
+    while ( (c = getchar()) != '\n' && c != EOF );
     //main loop: get and send lines of text
     while(fgets(buf, sizeof(buf),stdin)){
-        //TODO: Becuase while loop "please enter operation" prompt always prints after each command or at beginning
         //send command to server
-        buf[MAX_LINE-1]='\0';
+        //buf[MAX_LINE-1]='\0';
         ibytes = strlen(buf) + 1;
         if(send(tcp_s,buf,ibytes,0) == -1) error("client operation send error!");
         //handle operations
         if( handle_request(buf, sin, tcp_s, udp_s) < 1) break;
+        while ( (c = getchar()) != '\n' && c != EOF );
+        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT): ";
         bzero((char*)&buf, sizeof(buf));
     }
     close(udp_s);
@@ -163,15 +169,17 @@ int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int ud
     if (strncmp(buf, "CRT", 3) == 0) {
         crt_operation(udp_s,sin);
     } else if (strncmp(buf, "LIS", 3) == 0) {
+        lis_operation(udp_s, sin);
     } else if (strncmp(buf, "MSG", 3) == 0) {
         msg_operation(udp_s, sin);
     } else if (strncmp(buf, "DLT", 3) == 0) {
         dlt_operation(udp_s, sin);
     } else if (strncmp(buf, "RDB", 3) == 0) {
     } else if (strncmp(buf, "EDT", 3) == 0) {
+        edt_operation(udp_s, sin);
     } else if (strncmp(buf, "APN", 3) == 0) {
+		apn_operation(tcp_s);
     } else if (strncmp(buf, "DWN", 3) == 0) {
-        dwn_operation(tcp_s);
     } else if (strncmp(buf, "DST", 3) == 0) {
         dst_operation(udp_s,sin);
     } else if (strncmp(buf, "XIT", 3) == 0) {
@@ -179,12 +187,10 @@ int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int ud
     } else if (strncmp(buf, "SHT", 3) == 0) {
         return sht_operation(tcp_s);
     }else{
-        cout << "Wrong command" << endl;
-        cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
+        cout << "Invalid command, press ENTER to continue" << endl;
         return 1;
     }
 
-    cout << "Please enter your desired operation (CRT, LIS, MSG, DLT, RDB, EDT, APN, DWN, DST, XIT, SHT)" << endl;
     return 1;    
 
 }
@@ -197,7 +203,7 @@ void crt_operation(int s, struct sockaddr_in sin){
     socklen_t addr_len = sizeof(sin);     
 
     //ask for name of board to be created
-    cout << "What is the name of the new board to be created?" << endl;
+    cout << "Enter the name of the new board to be created: ";
     cin >> board_name;
     if(sendto(s,board_name.c_str(),strlen(board_name.c_str()),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending board name\n");
     //receive confirmation and print results
@@ -252,6 +258,23 @@ void msg_operation(int s, struct sockaddr_in sin) {
     cout << "Success: your message (identification number: " << result << ") has been posted to " << board_name << endl;
 }
 
+/* list all of the boards */
+void lis_operation(int s, struct sockaddr_in sin) {
+	int recv_len;
+    socklen_t addr_len = sizeof(sin); 
+	char buf[MAX_LINE];
+
+	cout << "IN lis" << endl;
+
+
+	memset(buf, '\0', sizeof(buf));
+	if (recv_len = recvfrom(s,buf,sizeof(buf),0, (struct sockaddr *)&sin,&addr_len) < 0) error("Client error in receiving board listing\n");
+	string boardListing = string(buf);
+
+	cout << boardListing;
+	cout << "finished lis" << endl;
+}
+
 /* on DLT, delete message and send response */
 void dlt_operation(int s, struct sockaddr_in sin) {
     string board_name, message_id;
@@ -270,8 +293,43 @@ void dlt_operation(int s, struct sockaddr_in sin) {
     if (result == "failed") {
         cout << "Failed: " << board_name << " does not exist on server" << endl;
         return;
-    }
+    } else if (result == "wronguser") {
+        cout << "Failed: you are not the user who created the original message" << endl;
+        return;
+	}
     cout << "Success: your message (identification number: " << message_id << ") has been deleted from " << board_name << endl;
+}
+
+/* on edt, edit message in a given board */
+void edt_operation(int s, struct sockaddr_in sin) {
+    string board_name, message_id, new_message;
+    socklen_t addr_len = sizeof(sin);     
+    char buf[MAX_LINE];
+    int buf_len;
+
+    cout << "Enter the name of the board to edit a message from: ";
+    cin >> board_name;
+    if (sendto(s,board_name.c_str(),strlen(board_name.c_str()),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending board name\n");
+
+    cout << "Enter the message ID to be edited: ";
+    cin >> message_id;
+    if (sendto(s,message_id.c_str(),strlen(message_id.c_str()),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending message\n");
+
+    cout << "Enter the new replacement message: ";
+    cin >> new_message;
+    if (sendto(s,new_message.c_str(),strlen(new_message.c_str()),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending message\n");
+
+    if ((buf_len = recvfrom(s,buf,sizeof(buf),0, (struct sockaddr *)&sin,&addr_len)) < 0) error("Client error in receiving message acknowledgement\n");
+    string result = string(buf, buf_len);
+    memset(buf, '\0', sizeof(buf));
+    if (result == "failed") {
+        cout << "Failed: " << board_name << " does not exist on server" << endl;
+        return;
+    } else if (result == "wronguser") {
+        cout << "Failed: you are not the user who created the original message" << endl;
+        return;
+	}
+    cout << "Success: your message (identification number: " << message_id << ") has been edited on " << board_name << endl;
 }
 
 /*Destroy a board (file)*/
@@ -291,13 +349,70 @@ void dst_operation(int s, struct sockaddr_in sin){
     cout << "Message from server upon request to destroy board " << board_name << ": " << response << endl;
 }
 
+void apn_operation(int s) {
+	FILE *fp;
+    string board_name, new_file;
+	struct stat st;    
+    char buf[MAX_LINE];
+    int buf_len, newFile_size;
+	string not_found = "-1";
+	string found = "1";
+	int not_found_len = not_found.length();
+	int found_len = found.length();
+
+    cout << "Enter the name of the board to append a file to: ";
+    cin >> board_name;
+    if (send(s,board_name.c_str(),strlen(board_name.c_str()),0) == -1) error("Client error in sending board name\n");
+
+    cout << "Enter the name of the file to append to the board: ";
+    cin >> new_file;
+    if (send(s,new_file.c_str(),strlen(new_file.c_str()),0) == -1) error("Client error in sending message\n");
+
+    // receive the confirmation if append is possible
+    if((buf_len = recv(s, buf, sizeof(buf), 0)) < 0) error("Server error in receving message ID\n"); 
+    string result = string(buf, buf_len);
+    memset(buf, '\0', sizeof(buf));
+    if (result == "failed") {
+        cout << "Failed: " << board_name << " does not exist on server" << endl;
+        return;
+    } else if (result == "fileexists") {
+        cout << "Failed: the file trying to be appended already exists" << endl;
+        return;
+	}
+
+	if (stat(new_file.c_str(), &st) != 0) {
+		// FILE DOES NOT EXIST
+		if (send(s, not_found.c_str(), not_found.length(),0) == -1) error("Client error in sending confirmation.\n");
+		cout << "File does not exist!" << endl;
+		return;
+	} else {
+		newFile_size = st.st_size;	// get size of file
+		string filesize = to_string(newFile_size);
+		if (send(s,filesize.c_str(),filesize.length(),0) == -1) error("Client error sending file contents.\n");
+	}
+
+	fp = fopen(new_file.c_str(), "r");
+	size_t nbytes = 0;
+	while ((nbytes = fread(buf, sizeof(char), MAX_LINE, fp)) > 0) {
+		if (send(s,buf,sizeof(buf),0) == -1) error("Client error sending file contents.\n");
+	}
+	memset(buf, '\0', MAX_LINE);
+
+	if((buf_len = recv(s, buf, sizeof(buf), 0)) < 0) error("Server error in receving message ID\n"); 
+    result = string(buf, buf_len);
+	if (result == "success") {
+		cout << "Sucessfuly appended the file \"" << new_file << "\" to the board named: " << board_name << endl;
+	}
+	return;
+}
+
+
 /*Sends file in chunks to client*/
 void dwn_operation(int s){
     string board_name, file_name, full_file_name, tmp;
     char buf[MAX_LINE];
     int buf_len, file_name_size, file_size, len;
     size_t read_so_far = 0;
-
 
     //ask for board and file to download
     cout << "Which board would you like to download from?" << endl;
@@ -316,18 +431,8 @@ void dwn_operation(int s){
         return;
     }
     memset(buf, '\0', sizeof(buf));
-
     ofstream outputFile;
-    outputFile.open(full_file_name,ios::app); 
-    //start receiving data in chunks
-    /*while(file_size > 0){
-        if((chunk_size = recv(s,buf,MAX_LINE,0)) == -1) error("Client error in receiving file chunks\n");
-        //store current chunk into file
-        ofstream outputFile();
-        outputFile.open(full_file_name);
-        outputFile << buf;
-        file_size - MAX_LINE; //file size - max line or when chunk size is less than MAX LINE
-    }*/
+    outputFile.open(full_file_name, ios::app);
 
     while (read_so_far < file_size) {
         if (file_size - read_so_far > MAX_LINE) {
@@ -344,3 +449,6 @@ void dwn_operation(int s){
     cout << endl;
 
 }
+
+
+
