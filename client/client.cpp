@@ -311,10 +311,11 @@ void edt_operation(int s, struct sockaddr_in sin) {
 
     cout << "Enter the message ID to be edited: ";
     cin >> message_id;
+	cin.ignore();
     if (sendto(s,message_id.c_str(),strlen(message_id.c_str()),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending message\n");
 
     cout << "Enter the new replacement message: ";
-    cin >> new_message;
+    getline(cin,new_message);
     if (sendto(s,new_message.c_str(),strlen(new_message.c_str()),0,(struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) error("Client error in sending message\n");
 
     if ((buf_len = recvfrom(s,buf,sizeof(buf),0, (struct sockaddr *)&sin,&addr_len)) < 0) error("Client error in receiving message acknowledgement\n");
