@@ -507,7 +507,11 @@ void apn_operation(int s) {
 	fstream outputFile;
     outputFile.open(appendFile.c_str(), fstream::in | fstream::out | fstream::app);
     while (readsoFar < fileSize) {
-		if ((recvlen=recv(s,buf,sizeof(buf),0)) == -1) error("Server receiving error!\n");
+        if (fileSize - readsoFar > MAX_LINE) {
+            if ((recvlen=recv(s, buf, sizeof(buf), 0)) == -1) error("Server receiving error!\n");
+        } else {
+            if ((recvlen=recv(s, buf, fileSize - readsoFar, 0)) == -1) error("Server receiving error!\n");
+        }
 		copy = string(buf, recvlen);
         outputFile << copy;
 		readsoFar += recvlen;
