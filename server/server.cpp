@@ -562,77 +562,40 @@ void dst_operation(int s, struct sockaddr_in sin){
 }
 /*send file given in chunks back to user*/
 void dwn_operation(int s){
-    string board_name, file_name,file_size, line, app_file_name;
+    string board_name, file_name, full_file_name, file_size_str;
     char byte, buf[MAX_LINE];
     const char *app_file_name_c;
-    int buf_len, i = 0, found = 0, file_size_int, total_bytes;
+    int i,buf_len, total_bytes;
+    struct stat st;
+    int32_t file_size;
+    FILE *fp;
 
     //receive name of board and file to download; convert file name to char * and take into account \n
     if((buf_len = recv(s,buf,sizeof(buf),0)) == -1) error("Server error in receiving reponse for dwn operation board\n");
     board_name = string(buf,buf_len);
-    memset(buf, '\0', sizeof(buf));
+    memset(buf, '\0', MAX_LINE);
     if((buf_len = recv(s,buf,sizeof(buf),0)) == -1) error("Server error in receiving reponse for dwn operation file\n");
     file_name = string(buf,buf_len);
-    app_file_name = file_name+"\n";
-    app_file_name_c = app_file_name.c_str();
-    memset(buf, '\0', sizeof(buf));
-/*
-    if(active_boards.find(board_name) == active_boards.end()) sprintf(file_size,"-1\n");
-    else{//check if file is appended and read in bit by bit until max line
-        //ifstream ifs(board_name, ios::in | ios::out | ios::binary);
-        ifstream ifs(board_name);
-        while(ifs.get(byte)){
-            if(byte == "@" && found == 0){
-                if(app_file_name[i] == byte)
-                for(i = 0; i<= sizeof(app_file_name_c); i++){
-                    if(app_file_name[i] == byte && byte == '\n') found = 1;
-                    if(app_file_name[i] != byte) break;
-                }
-            }
-        }
-        if(found == 0) sprintf(file_size, "-1\n");
-*/
-        //check if board exists
-        if(active_boards.find(board_name) == active_boards.end()){
-            file_size = "-1";
-        }else{
-            fstream is(board_name.c_str());
-            //search for @file_name by line, get next line(file_size), turn file_size into int
-            while(getline(is, line)){
-                if(found == 1){
-                    file_size = line;
-                    if(send(s,file_size.c_str(),sizeof(file_size.c_str()),0) == -1) error("server error in sending file size\n");
-                    file_size_int = atoi(file_size.c_str());
-                    break;
-                }
-                if(line == app_file_name) found = 1;
-            }
-            //char by char if file found and send contents with MAX_LINE in mind until @
-            if(found == 1){
-                while(is.get(byte)){
-                    //if i is MAX_LINE, send what you have, restart i and keep going
-                    if(i == MAX_LINE){ 
-                        if(send(s,buf,sizeof(buf),0) == -1) error("server error in sending chunks of data to download\n");
-                        memset(buf,'\0',sizeof(buf));
-                        i = 0;
-                    }
-                    //if total bytes copied so far is == total file size then we're done and send remaining
-                    if(total_bytes == file_size_int){
-                        if(send(s,buf,sizeof(buf),0) == -1) error("server error in sending final chunck of data to download\n");
-                        memset(buf,'\0',sizeof(buf));
-                        break;
-                    }
-                    //if i is not MAX_LINE yet, keep adding to buffer and increasing i and total_bytes
-                    if(i != MAX_LINE){
-                        buf[i] = byte;
-                        i += 1;
-                        total_bytes += 1;
-                    }
-                }
-            }   
-            if(found == 0) file_size = "-1";
-        } 
-        if(send(s,file_size.c_str(),sizeof(file_size.c_str()),0) == -1) error("server error in sending file size\n");
+    full_file_name = board_name+"-"+file_name;
+    memset(buf, '\0', MAX_LINE);
+    //check if file exists
+    if (stat(full_file_name.c_str(), &st) != 0) {
+        file_size_str = "-1";
+        if(send(s,file_size_str.c_str(),file_size_str.length(),0) == -1) error("server error in sending negative 1\n");
+        return;
+    }
+    file_size = st.st_size;
+    file_size_str = to_string(static_cast<long long>(file_size));
+    if(send(s,file_size_str.c_str(),file_size_str.length(),0) == -1) error("server error in sending file size\n");
+
+    /* send contents to server */
+    fp = fopen(full_file_name.c_str(), "r");
+    size_t n_bytes = 0;
+    memset(buf, '\0', MAX_LINE);
+    while ((n_bytes = fread(buf, sizeof(char), MAX_LINE, fp)) > 0){
+        if (send(s,buf,sizeof(buf),0) == -1) error("server error in sending contents in chunks\n");
+        memset(buf, '\0', MAX_LINE);
+    }
 }
 
 void rdb_operation(int s) {

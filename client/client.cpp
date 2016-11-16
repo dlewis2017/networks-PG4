@@ -30,7 +30,7 @@ void edt_operation(int s, struct sockaddr_in sin);
 void lis_operation(int s);
 void rdb_operation(int s);
 void apn_operation(int s);
-//void dwn_operation(int s);
+void dwn_operation(int s);
 void dst_operation(int s, struct sockaddr_in sin);
 int sht_operation(int s);
 
@@ -179,8 +179,9 @@ int handle_request(char buf[MAX_LINE], struct sockaddr_in sin, int tcp_s, int ud
     } else if (strncmp(buf, "EDT", 3) == 0) {
         edt_operation(udp_s, sin);
     } else if (strncmp(buf, "APN", 3) == 0) {
-		apn_operation(tcp_s);
+	apn_operation(tcp_s);
     } else if (strncmp(buf, "DWN", 3) == 0) {
+        dwn_operation(tcp_s);
     } else if (strncmp(buf, "DST", 3) == 0) {
         dst_operation(udp_s,sin);
     } else if (strncmp(buf, "XIT", 3) == 0) {
@@ -414,22 +415,23 @@ void dwn_operation(int s){
     size_t read_so_far = 0;
 
     //ask for board and file to download
-    cout << "Which board would you like to download from?" << endl;
+    cout << "Which board would you like to download from? ";
     cin >> board_name;
-    if(send(s,board_name.c_str(),sizeof(board_name.c_str()),0) == -1) error("Client error in sending board to download\n");
-    cout << "Which file will you be looking to download?" << endl;
+    if(send(s,board_name.c_str(),board_name.length(),0) == -1) error("Client error in sending board to download\n");
+    cout << "Which file will you be looking to download? ";
     cin >> file_name;
-    if(send(s,file_name.c_str(),sizeof(file_name.c_str()),0) == -1) error("Client error in sending board to download\n");
+    if(send(s,file_name.c_str(),file_name.length(),0) == -1) error("Client error in sending board to download\n");
  
-    full_file_name = board_name+file_name;
+    full_file_name = board_name+"-"+file_name;
     //receive file size, if negative there was an error
     if((file_name_size = recv(s,buf,sizeof(buf),0)) == -1) error("Client error in receiving file size to download\n");
-    file_size = atoi(buf);
+    file_size = atoi(buf); 
     if(file_size < 0){
         cout << "File size was negative, error occured" <<endl;
         return;
     }
-    memset(buf, '\0', sizeof(buf));
+    memset(buf, '\0', MAX_LINE);
+    char *file_buf = (char*) malloc(file_size * sizeof(char));
     ofstream outputFile;
     outputFile.open(full_file_name, ios::app);
 
