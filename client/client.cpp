@@ -422,7 +422,7 @@ void dwn_operation(int s){
     cin >> file_name;
     if(send(s,file_name.c_str(),sizeof(file_name.c_str()),0) == -1) error("Client error in sending board to download\n");
  
-    full_file_name = board_name+file_name;
+    full_file_name = board_name+"-"+file_name;
     //receive file size, if negative there was an error
     if((file_name_size = recv(s,buf,sizeof(buf),0)) == -1) error("Client error in receiving file size to download\n");
     file_size = atoi(buf);
